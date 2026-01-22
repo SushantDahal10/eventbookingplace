@@ -105,8 +105,8 @@ const VenueDetails = () => {
 
                         {/* Why This Venue / Description */}
                         <section>
-                            <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">About the Space</h2>
-                            <p className="text-gray-600 leading-relaxed text-lg mb-8">
+                            <h2 className="text-2xl font-heading font-bold text-class-main mb-6">About the Space</h2>
+                            <p className="text-text-muted leading-relaxed text-lg mb-8">
                                 {venue.description}
                             </p>
 
@@ -132,7 +132,7 @@ const VenueDetails = () => {
 
                         {/* Amenities */}
                         <section>
-                            <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">Amenities & Features</h2>
+                            <h2 className="text-2xl font-heading font-bold text-class-main mb-6">Amenities & Features</h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 {venue.features.map((feature) => (
                                     <div key={feature} className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:border-primary/30 transition-colors">
@@ -145,7 +145,7 @@ const VenueDetails = () => {
 
                         {/* Gallery */}
                         <section>
-                            <h2 className="text-2xl font-heading font-bold text-gray-900 mb-6">Gallery</h2>
+                            <h2 className="text-2xl font-heading font-bold text-class-main mb-6">Gallery</h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {venue.gallery.map((img, i) => (
                                     <div key={i} className="rounded-xl overflow-hidden h-48 group">
@@ -162,10 +162,10 @@ const VenueDetails = () => {
                         {/* Upcoming Events Here */}
                         <section>
                             <div className="flex justify-between items-end mb-6">
-                                <h2 className="text-2xl font-heading font-bold text-gray-900">Upcoming Events Here</h2>
-                                <a href="#" className="hidden md:inline-flex items-center text-primary font-bold hover:underline">
+                                <h2 className="text-2xl font-heading font-bold text-class-main">Upcoming Events Here</h2>
+                                <Link to={`/venues/${venue.id}/calendar`} className="hidden md:inline-flex items-center text-primary font-bold hover:underline">
                                     See Calendar
-                                </a>
+                                </Link>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {SIMILAR_EVENTS.map(event => (
@@ -202,9 +202,9 @@ const VenueDetails = () => {
                                 </div>
                             </div>
 
-                            <button className="w-full bg-secondary hover:bg-gray-800 text-white font-bold py-4 rounded-xl transition-all shadow-lg transform active:scale-95 mb-4">
+                            <Link to={`/venues/${venue.id}/book?date=Select Date`} className="block w-full bg-secondary hover:bg-gray-800 text-white font-bold py-4 rounded-xl transition-all shadow-lg transform active:scale-95 mb-4 text-center">
                                 Book This Venue
-                            </button>
+                            </Link>
                             <button className="w-full border-2 border-primary text-primary hover:bg-primary/5 font-bold py-4 rounded-xl transition-all">
                                 Download Floor Plan
                             </button>

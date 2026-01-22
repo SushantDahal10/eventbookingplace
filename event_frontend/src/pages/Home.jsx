@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import HeroCarousel from '../components/common/HeroCarousel';
@@ -42,17 +42,23 @@ const POPULAR_EVENTS = [
   }
 ];
 
-// Mapping Category Names to Query Params if needed, but simple string matching works best for this demo
+// Mapping Category Names to Query Params
 const CATEGORIES = [
-  { id: 1, name: "Concerts", slug: "Concert", icon: "🎉" },
-  { id: 2, name: "Comedy", slug: "Comedy", icon: "🎙️" },
-  { id: 3, name: "Sports & Turf", slug: "Sports", icon: "⚽" },
-  { id: 4, name: "Music", slug: "Music", icon: "🎵" }, // Changed Theater to Music to match request
+  { id: 1, name: "Concerts", slug: "Concert", icon: "🎉", color: "bg-purple-100 text-purple-600" },
+  { id: 2, name: "Comedy", slug: "Comedy", icon: "🎙️", color: "bg-yellow-100 text-yellow-600" },
+  { id: 3, name: "Sports", slug: "Sports", icon: "⚽", color: "bg-blue-100 text-blue-600" },
+  { id: 4, name: "Music", slug: "Music", icon: "🎵", color: "bg-pink-100 text-pink-600" },
+  { id: 5, name: "Workshop", slug: "Workshop", icon: "💡", color: "bg-green-100 text-green-600" },
 ];
 
 const Home = () => {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-surface-dim font-body">
       <Navbar />
 
       <main className="flex-grow">
@@ -63,48 +69,75 @@ const Home = () => {
         <SearchBar />
 
         {/* Categories */}
-        <section className="max-w-[1200px] mx-auto px-4 mt-16 mb-12">
-          <div className="flex flex-wrap justify-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <section className="max-w-7xl mx-auto px-4 mt-20 mb-16 animate-[fadeIn_1s]">
+          <div className="flex justify-between items-end mb-8">
+            <div>
+              <h2 className="text-3xl font-heading font-extrabold text-secondary mb-2">Explore Categories</h2>
+              <p className="text-text-muted">Dive into the types of events you love.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-6">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.id}
                 to={`/events?category=${cat.slug}`}
-                className="flex items-center gap-2 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors text-secondary font-medium"
+                className="group flex flex-col items-center gap-3 p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 w-36 md:w-48"
               >
-                <span className="text-xl">{cat.icon}</span>
-                {cat.name}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl group-hover:scale-110 transition-transform ${cat.color}`}>
+                  {cat.icon}
+                </div>
+                <span className="text-lg font-bold text-gray-700 group-hover:text-primary transition-colors">{cat.name}</span>
               </Link>
             ))}
           </div>
         </section>
 
         {/* Popular Events */}
-        <section className="max-w-[1200px] mx-auto px-4 mb-20">
-          <div className="flex justify-between items-end mb-8">
+        <section className="max-w-7xl mx-auto px-4 mb-24 animate-[slideUp_1s]">
+          <div className="flex justify-between items-end mb-10">
             <div>
-              <h3 className="text-3xl font-heading font-bold text-gray-900 mb-2">Popular Upcoming Events</h3>
-              <p className="text-gray-500">Don't miss out on these trending events</p>
+              <h3 className="text-4xl font-heading font-extrabold text-secondary mb-2">Trending Now</h3>
+              <p className="text-text-muted text-lg">Don't miss out on these popular upcoming experiences.</p>
             </div>
-            <Link to="/events" className="hidden md:inline-flex items-center text-primary font-bold hover:underline">
+            <Link to="/events" className="hidden md:inline-flex items-center text-primary font-bold hover:text-primary-dark transition-colors text-lg group">
               View All Events
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1 transform group-hover:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {POPULAR_EVENTS.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
 
-          <div className="mt-8 text-center md:hidden">
-            <Link to="/events" className="inline-block border border-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-50">
-              View All Events
+          <div className="mt-12 text-center md:hidden">
+            <Link to="/events" className="inline-block btn-primary shadow-lg shadow-primary/20">
+              Explore All Events
             </Link>
           </div>
         </section>
+
+        {/* Promo Banner */}
+        <section className="max-w-7xl mx-auto px-4 mb-24">
+          <div className="relative rounded-3xl overflow-hidden bg-secondary h-80 md:h-96 flex items-center">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1459749411177-287ce63e3ba9?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center opacity-40"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent"></div>
+
+            <div className="relative z-10 p-8 md:p-16 max-w-2xl">
+              <span className="text-primary font-bold tracking-widest uppercase mb-2 block">Partner With Us</span>
+              <h2 className="text-3xl md:text-5xl font-heading font-extrabold text-white mb-6">List Your Venue or Event</h2>
+              <p className="text-gray-300 text-lg mb-8">Get access to thousands of daily users and manage your bookings effortlessly with our dashboard.</p>
+              <button className="bg-white text-secondary font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 shadow-xl">
+                Become a Partner
+              </button>
+            </div>
+          </div>
+        </section>
+
       </main>
 
       <Footer />
