@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
@@ -22,7 +22,6 @@ const getEventById = (id) => {
 const EventDetails = () => {
     const { id } = useParams();
     const event = getEventById(id);
-    const [ticketCount, setTicketCount] = useState(1);
 
     return (
         <div className="min-h-screen flex flex-col bg-surface-dim font-body">
@@ -101,34 +100,9 @@ const EventDetails = () => {
                         <div className="relative">
                             <div className="sticky top-24 card-premium p-6 border-t-4 border-primary shadow-2xl animate-[slideUp_1s_0.4s]">
                                 <div className="text-center mb-6">
-                                    <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Ticket Price</p>
+                                    <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Starting From</p>
                                     <div className="text-4xl font-extrabold text-secondary">
                                         Rs. {event.price} <span className="text-lg font-medium text-gray-400">/ person</span>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm font-bold text-gray-700">Quantity</span>
-                                        <div className="flex items-center gap-3 bg-white rounded-lg p-1 shadow-sm">
-                                            <button
-                                                onClick={() => setTicketCount(Math.max(1, ticketCount - 1))}
-                                                className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-50 text-gray-600 hover:bg-gray-100 font-bold transition-colors"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="font-bold text-lg w-6 text-center">{ticketCount}</span>
-                                            <button
-                                                onClick={() => setTicketCount(Math.min(10, ticketCount + 1))}
-                                                className="w-8 h-8 flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary-dark font-bold transition-colors shadow-sm"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200">
-                                        <span className="text-gray-500">Subtotal</span>
-                                        <span className="font-bold text-gray-900">Rs. {event.price * ticketCount}</span>
                                     </div>
                                 </div>
 

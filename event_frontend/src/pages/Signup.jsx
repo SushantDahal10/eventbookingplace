@@ -3,15 +3,28 @@ import { Link, useNavigate } from 'react-router-dom';
 
 const Signup = () => {
     const navigate = useNavigate();
+    const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [otp, setOtp] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSignup = (e) => {
         e.preventDefault();
-        // Mimic signup logic
-        console.log("Signing up with:", name, email, password);
-        navigate('/');
+        // Mimic sending OTP
+        console.log("Sending OTP to:", email);
+        setStep(2);
+    };
+
+    const handleVerify = (e) => {
+        e.preventDefault();
+        // Mimic verification
+        if (otp.length === 6) {
+            console.log("Verified! details:", name, email, password);
+            navigate('/');
+        } else {
+            alert("Please enter a valid 6-digit code");
+        }
     };
 
     return (
@@ -50,49 +63,88 @@ const Signup = () => {
                         <p className="text-text-muted">Start your journey with us today.</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
-                            <input
-                                type="text"
-                                placeholder="Sushant Dahal"
-                                className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-400 text-gray-700"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                            />
-                        </div>
+                    {step === 1 ? (
+                        <form onSubmit={handleSignup} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="Sushant Dahal"
+                                    className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-400 text-gray-700"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                />
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
-                            <input
-                                type="email"
-                                placeholder="name@company.com"
-                                className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-400 text-gray-700"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
-                        </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
+                                <input
+                                    type="email"
+                                    placeholder="name@company.com"
+                                    className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-400 text-gray-700"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Password</label>
-                            <input
-                                type="password"
-                                placeholder="Create a strong password"
-                                className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-400 text-gray-700"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                minLength={8}
-                                required
-                            />
-                            <p className="text-xs text-gray-500 mt-2">Must be at least 8 characters.</p>
-                        </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="Create a strong password"
+                                    className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-400 text-gray-700"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    minLength={8}
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-2">Must be at least 8 characters.</p>
+                            </div>
 
-                        <button className="w-full btn-primary py-4 text-lg">
-                            Get Started
-                        </button>
-                    </form>
+                            <button className="w-full btn-primary py-4 text-lg">
+                                Get Started
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleVerify} className="space-y-6 animate-[fadeIn_0.3s]">
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                                    🛡️
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900">Verify your email</h3>
+                                <p className="text-gray-600 text-sm mt-2">
+                                    We've sent a 6-digit code to <span className="font-bold">{email}</span>
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2 text-center">Enter Verification Code</label>
+                                <input
+                                    type="text"
+                                    placeholder="123456"
+                                    className="w-full px-4 py-4 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder-gray-300 text-gray-900 text-center text-2xl font-bold tracking-widest"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                                    maxLength={6}
+                                    required
+                                />
+                            </div>
+
+                            <button className="w-full btn-primary py-4 text-lg">
+                                Verify & Continue
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="w-full text-sm text-gray-500 hover:text-gray-700 font-medium"
+                            >
+                                Change email address
+                            </button>
+                        </form>
+                    )}
 
                     <p className="mt-8 text-center text-sm text-gray-600">
                         Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Log in</Link>
