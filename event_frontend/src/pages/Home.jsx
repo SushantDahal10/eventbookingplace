@@ -131,9 +131,9 @@ const Home = () => {
               <span className="text-primary font-bold tracking-widest uppercase mb-2 block">Partner With Us</span>
               <h2 className="text-3xl md:text-5xl font-heading font-extrabold text-white mb-6">List Your Venue or Event</h2>
               <p className="text-gray-300 text-lg mb-8">Get access to thousands of daily users and manage your bookings effortlessly with our dashboard.</p>
-              <button className="bg-white text-secondary font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 shadow-xl">
+              <Link to="/become-partner" className="inline-block bg-white text-secondary font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 shadow-xl">
                 Become a Partner
-              </button>
+              </Link>
             </div>
           </div>
         </section>

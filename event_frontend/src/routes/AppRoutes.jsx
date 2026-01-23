@@ -16,6 +16,9 @@ import Terms from '../pages/Terms';
 import Privacy from '../pages/Privacy';
 import MyBookings from '../pages/MyBookings';
 import Chat from '../pages/Chat';
+import BecomePartner from '../pages/BecomePartner';
+import PartnerDashboard from '../pages/partner/PartnerDashboard';
+import CreateEvent from '../pages/partner/CreateEvent';
 
 const AppRoutes = () => {
     return (
@@ -36,6 +39,11 @@ const AppRoutes = () => {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/profile/bookings" element={<MyBookings />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/become-partner" element={<BecomePartner />} />
+
+            {/* Partner Routes */}
+            <Route path="/partner/dashboard" element={<PartnerDashboard />} />
+            <Route path="/partner/create" element={<CreateEvent />} />
         </Routes>
     );
 };
