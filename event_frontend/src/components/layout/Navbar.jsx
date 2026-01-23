@@ -91,7 +91,7 @@ const Navbar = () => {
     const navItems = [
         { label: 'Home', path: '/' },
         { label: 'Events', path: '/events' },
-        { label: 'Venues', path: '/venues' },
+        // { label: 'Venues', path: '/venues' },
         { label: 'About', path: '/about' }
     ];
 
@@ -116,8 +116,8 @@ const Navbar = () => {
                         <div
                             onClick={() => setIsLocationModalOpen(true)}
                             className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all cursor-pointer group select-none ${isLightNav
-                                    ? 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
-                                    : 'bg-white/10 border-white/10 hover:bg-white/20 text-gray-200 group-hover:text-white'
+                                ? 'bg-gray-100 border-gray-200 hover:bg-gray-200 text-gray-700'
+                                : 'bg-white/10 border-white/10 hover:bg-white/20 text-gray-200 group-hover:text-white'
                                 }`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">

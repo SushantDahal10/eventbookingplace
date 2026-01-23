@@ -122,7 +122,7 @@ const Home = () => {
         </section>
 
         {/* Promo Banner */}
-        <section className="max-w-7xl mx-auto px-4 mb-24">
+        {/* <section className="max-w-7xl mx-auto px-4 mb-24">
           <div className="relative rounded-3xl overflow-hidden bg-secondary h-80 md:h-96 flex items-center">
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1459749411177-287ce63e3ba9?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center opacity-40"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent"></div>
@@ -136,7 +136,7 @@ const Home = () => {
               </Link>
             </div>
           </div>
-        </section>
+        </section> */}
 
       </main>
 
