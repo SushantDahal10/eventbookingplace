@@ -10,15 +10,21 @@ import { QRCodeCanvas } from 'qrcode.react';
 const TicketModal = ({ booking, onClose }) => {
     if (!booking) return null;
 
-    // Handle ticket_type whether it's an array, a JSON string, or legacy text
+    // Handle ticket_type whether it's an array, a JSON string, a wrapped object, or legacy text
     let tickets = [];
     try {
-        if (Array.isArray(booking.ticket_type)) {
-            tickets = booking.ticket_type;
-        } else if (typeof booking.ticket_type === 'string' && booking.ticket_type.startsWith('[')) {
-            tickets = JSON.parse(booking.ticket_type);
+        const rawType = booking.ticket_type;
+        if (Array.isArray(rawType)) {
+            tickets = rawType;
+        } else if (typeof rawType === 'object' && rawType !== null && rawType.tickets) {
+            tickets = rawType.tickets;
+        } else if (typeof rawType === 'string' && rawType.startsWith('[')) {
+            tickets = JSON.parse(rawType);
+        } else if (typeof rawType === 'string' && rawType.startsWith('{')) {
+            const parsed = JSON.parse(rawType);
+            tickets = parsed.tickets || [parsed];
         } else {
-            tickets = [{ name: booking.ticket_type || 'Mixed', quantity: booking.quantity, price: booking.total_amount }];
+            tickets = [{ name: rawType || 'Mixed', quantity: booking.quantity, price: booking.total_amount }];
         }
     } catch (e) {
         tickets = [{ name: booking.ticket_type || 'Mixed', quantity: booking.quantity, price: booking.total_amount }];

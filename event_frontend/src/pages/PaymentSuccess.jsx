@@ -11,14 +11,12 @@ const PaymentSuccess = () => {
     const [status, setStatus] = useState('verifying'); // verifying, success, error
     const data = searchParams.get('data');
 
+    const calledRef = React.useRef(false);
+
     useEffect(() => {
         const verifyPayment = async () => {
-            if (!data) {
-                // If there's no data, maybe it was a direct visit?
-                // But for now let's just show error or redirect home.
-                setStatus('error');
-                return;
-            }
+            if (!data || calledRef.current) return;
+            calledRef.current = true;
 
             try {
                 // Call verification endpoint
@@ -36,10 +34,6 @@ const PaymentSuccess = () => {
                 }
             } catch (error) {
                 console.error("Verification error:", error);
-
-                // Fallback: If verification fails (e.g. backend error), 
-                // but we know we just came from eSewa, we might want to be lenient 
-                // OR strict. Staying strict for now.
                 setStatus('error');
                 toast.error('Failed to verify payment');
             }

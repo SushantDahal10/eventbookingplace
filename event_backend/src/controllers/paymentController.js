@@ -28,7 +28,11 @@ const initiateEsewaPayment = async (req, res) => {
                     event_title: eventDetails.title,
                     event_date: eventDetails.date,
                     event_location: eventDetails.location,
-                    ticket_type: eventDetails.tickets, // Now expects JSON array: [{name, price, quantity}]
+                    ticket_type: {
+                        tickets: eventDetails.tickets,
+                        customerName: req.body.customerName,
+                        customerPhone: req.body.customerPhone
+                    },
                     quantity: eventDetails.count,
                     total_amount: total_amount,
                     transaction_uuid: transaction_uuid,
@@ -100,14 +104,91 @@ const verifyEsewaPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: "Payment status not complete" });
         }
 
-        const { error } = await supabase
+        // Atomic update: Only update if status is NOT already COMPLETED
+        const { data: updatedBookings, error } = await supabase
             .from('bookings')
             .update({ status: 'COMPLETED' })
-            .eq('transaction_uuid', decodedData.transaction_uuid);
+            .eq('transaction_uuid', decodedData.transaction_uuid)
+            .neq('status', 'COMPLETED')
+            .select();
 
         if (error) {
             console.error("Database Update Error:", error);
             return res.status(500).json({ success: false, message: "Database update failed" });
+        }
+
+        // If no rows were updated, it means it was already COMPLETED (or not found)
+        if (!updatedBookings || updatedBookings.length === 0) {
+            console.log("Booking already completed or not found, skipping email.");
+            return res.json({ success: true, message: "Payment already processed" });
+        }
+
+        // --- NEW: SEND CONFIRMATION EMAIL ---
+        try {
+            // Fetch booking details with user email (Now we know this is the first time)
+            const { data: booking, error: fetchError } = await supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    users ( email, full_name )
+                `)
+                .eq('transaction_uuid', decodedData.transaction_uuid)
+                .single();
+
+            if (!fetchError && booking) {
+                console.log("--- Email Data Extraction ---");
+                console.log("Booking ID:", booking.id);
+                console.log("Registered User Email:", booking.users?.email);
+                console.log("Registered User Name:", booking.users?.full_name);
+
+                const emailService = require('../services/emailService');
+
+                // Extract attendee info (Prioritize booking form details)
+                let tickets = [];
+                let userName = booking.users?.full_name || "Valued Customer";
+                let userPhone = "";
+
+                let ticketTypeData = booking.ticket_type;
+                if (typeof ticketTypeData === 'string') {
+                    try { ticketTypeData = JSON.parse(ticketTypeData); } catch (e) {
+                        console.error("Failed to parse ticket_type JSON string:", e);
+                    }
+                }
+
+                if (typeof ticketTypeData === 'object' && ticketTypeData !== null) {
+                    tickets = ticketTypeData.tickets || [];
+                    userName = ticketTypeData.customerName || userName;
+                    userPhone = ticketTypeData.customerPhone || "";
+                    console.log("Extracted from JSON - Name:", userName, "Phone:", userPhone);
+                } else {
+                    console.warn("ticket_type is not a valid object/JSON:", typeof ticketTypeData);
+                    tickets = Array.isArray(ticketTypeData) ? ticketTypeData : [];
+                }
+
+                console.log("Final Email Data - To:", booking.users.email, "Name:", userName, "Total:", booking.total_amount);
+
+                const emailResult = await emailService.sendBookingConfirmation(booking.users.email, {
+                    userName,
+                    userPhone,
+                    eventTitle: booking.event_title,
+                    eventDate: booking.event_date,
+                    eventLocation: booking.event_location,
+                    tickets,
+                    totalAmount: booking.total_amount,
+                    transactionUuid: booking.transaction_uuid
+                });
+
+                if (emailResult) {
+                    console.log("SUCCESS: Booking confirmation email with PDF sent.");
+                } else {
+                    console.error("FAILURE: emailService.sendBookingConfirmation returned null.");
+                }
+            } else {
+                console.warn("Could not fetch booking/user details for email:", fetchError);
+            }
+        } catch (emailErr) {
+            console.error("Failed to send confirmation email:", emailErr);
+            // Don't fail the verification if only email fails
         }
 
         res.json({ success: true, message: "Payment verified and booking confirmed" });

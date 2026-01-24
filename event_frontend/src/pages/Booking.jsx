@@ -94,6 +94,8 @@ const Booking = () => {
                     deliveryCharge: 0,
                     taxAmount: 0,
                     userId: user.id, // Assuming user object has id
+                    customerName: checkoutDetails.fullName,
+                    customerPhone: checkoutDetails.phoneNumber,
                     eventDetails: {
                         title: event.title,
                         date: event.date,
