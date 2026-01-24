@@ -8,15 +8,23 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check local storage for persisted user info (if any)
-        // Note: Since we use HttpOnly cookies, we can't read the token, 
-        // but we can persist basic user info to keep UI in sync or fetch /me endpoint.
-        // For now, we'll try to recover from localStorage
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
+        const checkUser = async () => {
+            try {
+                // First try to get user from API (checks cookie)
+                const data = await authService.getCurrentUser();
+                setUser(data.user);
+                localStorage.setItem('user', JSON.stringify(data.user));
+            } catch (err) {
+                // If failed, check if we have local storage (fallback or clear)
+                // Actually, if API fails (401), we should clear local storage
+                setUser(null);
+                localStorage.removeItem('user');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkUser();
     }, []);
 
     const login = async (credentials) => {

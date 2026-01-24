@@ -320,3 +320,27 @@ exports.resendOtp = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
+
+exports.getMe = async (req, res) => {
+    try {
+        const token = req.cookies.token;
+        if (!token) return res.status(401).json({ error: 'Not authenticated' });
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('id, full_name, email, is_verified')
+            .eq('id', decoded.userId)
+            .single();
+
+        if (error || !user) return res.status(401).json({ error: 'User not found' });
+
+        res.status(200).json({
+            user: { id: user.id, fullName: user.full_name, email: user.email }
+        });
+    } catch (err) {
+        // Token expired or invalid
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+};
