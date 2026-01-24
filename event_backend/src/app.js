@@ -9,7 +9,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: 'http://localhost:5173', // Frontend URL
+    origin: ['http://localhost:5173', 'http://10.201.245.194:5173'], // Frontend URLs
     credentials: true
 }));
 app.use(express.json());

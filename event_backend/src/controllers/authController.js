@@ -194,9 +194,7 @@ exports.forgotPassword = async (req, res) => {
             .single();
 
         if (userError || !user) {
-            // Security: Don't reveal if user exists. Fake success or generic message.
-            // But for dev, we can return success.
-            return res.status(200).json({ message: 'If account exists, OTP sent.' });
+            return res.status(404).json({ error: 'User with this email does not exist.' });
         }
 
         // 2. Cleanup old reset OTPs
