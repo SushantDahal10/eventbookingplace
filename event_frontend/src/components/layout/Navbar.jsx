@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Auth State (Mocking logged-in user for demo)
-    const [isLoggedIn, setIsLoggedIn] = useState(true);
+    // Auth State from Context
+    const { user, logout } = useAuth();
+    const isLoggedIn = !!user;
+
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const intentProfileRef = useRef(null);
 
@@ -72,7 +76,7 @@ const Navbar = () => {
                 }, 1000);
             });
         } else {
-            alert("Geolocation is not available in your browser.");
+            toast.error("Geolocation is not available in your browser.");
             setIsDetecting(false);
         }
     };
@@ -175,11 +179,11 @@ const Navbar = () => {
                                         <div className="absolute right-0 mt-3 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-[scaleIn_0.2s] origin-top-right ring-1 ring-black ring-opacity-5">
                                             <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
                                                 <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                                                    S
+                                                    {(user?.fullName || user?.full_name || 'U').charAt(0).toUpperCase()}
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-bold text-gray-900 text-sm">Sushant Dahal</h4>
-                                                    <p className="text-xs text-gray-500 truncate">user@example.com</p>
+                                                <div className="overflow-hidden">
+                                                    <h4 className="font-bold text-gray-900 text-sm truncate">{user?.fullName || user?.full_name || 'User'}</h4>
+                                                    <p className="text-xs text-gray-500 truncate" title={user?.email}>{user?.email}</p>
                                                 </div>
                                             </div>
 
@@ -190,17 +194,14 @@ const Navbar = () => {
                                                 <Link to="/chat" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors flex items-center gap-3">
                                                     <span>💬</span> Chat with Us
                                                 </Link>
-                                                <Link to="/terms" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors flex items-center gap-3">
-                                                    <span>📄</span> Terms & Conditions
-                                                </Link>
-                                                <Link to="/privacy" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors flex items-center gap-3">
-                                                    <span>🔒</span> Privacy Policy
-                                                </Link>
                                             </div>
 
                                             <div className="border-t border-gray-100 p-2">
                                                 <button
-                                                    onClick={() => setIsLoggedIn(false)}
+                                                    onClick={() => {
+                                                        logout();
+                                                        setIsLoggedIn(false); // Update local state if needed (though context handles it)
+                                                    }}
                                                     className="w-full text-center py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                 >
                                                     Logout
@@ -265,7 +266,7 @@ const Navbar = () => {
                                         <Link to="/profile/bookings" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-700 hover:text-primary font-medium px-2 py-1 flex items-center gap-2">
                                             <span>🎟️</span> My Bookings
                                         </Link>
-                                        <button onClick={() => setIsLoggedIn(false)} className="text-red-500 font-medium text-left px-2 py-1">Logout</button>
+                                        <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="text-red-500 font-medium text-left px-2 py-1">Logout</button>
                                     </>
                                 ) : (
                                     <Link to="/login" className="bg-primary text-white px-4 py-3 rounded-xl text-center font-bold mt-2 shadow-lg shadow-primary/20">

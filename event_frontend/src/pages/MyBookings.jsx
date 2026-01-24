@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const MOCK_BOOKINGS = [
     {
@@ -129,7 +131,7 @@ const ReviewModal = ({ booking, onClose }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        alert('Thank you for your review!');
+        toast.success('Thank you for your review!');
         onClose();
     };
 

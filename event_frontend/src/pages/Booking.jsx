@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 
@@ -23,6 +25,7 @@ const getEventById = (id) => {
 const Booking = () => {
     const { eventId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const event = getEventById(eventId);
 
     // State now tracks count for EACH ticket type: { gen: 0, fan: 2, vip: 0 }
@@ -51,11 +54,20 @@ const Booking = () => {
 
     const handleCheckout = (e) => {
         e.preventDefault();
-        if (totalTickets === 0) {
-            alert("Please select at least one ticket.");
+
+        if (!user) {
+            toast.error("Please login to book tickets");
+            navigate('/login');
             return;
         }
-        alert(`Processing payment of Rs. ${total} via ${paymentMethod} for ${event.title}`);
+
+        if (totalTickets === 0) {
+            toast.error("Please select at least one ticket");
+            return;
+        }
+
+        // Proceed (Mock)
+        toast.success(`Processing payment of Rs. ${total}`);
         navigate('/');
     };
 
@@ -217,7 +229,7 @@ const Booking = () => {
                                     </div>
 
                                     <button onClick={handleCheckout} disabled={totalTickets === 0} className="w-full btn-primary py-4 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                        Pay Rs. {total}
+                                        {user ? `Pay Rs. ${total}` : 'Login to Continue'}
                                     </button>
 
                                     <p className="text-xs text-center text-gray-400 mt-4 flex items-center justify-center gap-1">

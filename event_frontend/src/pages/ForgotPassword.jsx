@@ -1,16 +1,54 @@
-import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
+    const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password
     const [email, setEmail] = useState('');
-    const [isSubmitted, setIsSubmitted] = useState(false);
 
-    const handleSubmit = (e) => {
+    // Step 2 States
+    const [otp, setOtp] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+
+    // UI States
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [message, setMessage] = useState(null);
+
+    const handleRequestOTP = async (e) => {
         e.preventDefault();
-        // Mimic API call
-        console.log("Reset link sent to:", email);
-        setIsSubmitted(true);
+        setLoading(true);
+        setError(null);
+        try {
+            await authService.forgotPassword(email);
+            setStep(2);
+            setMessage(`OTP sent to ${email}`);
+            toast.success(`OTP sent to ${email}`);
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Failed to send OTP';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        try {
+            await authService.resetPassword({ email, otp, newPassword });
+            toast.success("Password reset successfully! Please log in.");
+            navigate('/login');
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Reset failed';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -45,12 +83,27 @@ const ForgotPassword = () => {
 
                 <div className="w-full max-w-md animate-[fadeIn_0.5s]">
                     <div className="mb-10 text-center lg:text-left">
-                        <h1 className="text-4xl font-heading font-extrabold text-secondary mb-3">Forgot Password?</h1>
-                        <p className="text-text-muted">Enter the email associated with your account.</p>
+                        <h1 className="text-4xl font-heading font-extrabold text-secondary mb-3">
+                            {step === 1 ? 'Forgot Password?' : 'Reset Password'}
+                        </h1>
+                        <p className="text-text-muted">
+                            {step === 1 ? 'Enter the email associated with your account.' : 'Enter the code sent to your email.'}
+                        </p>
                     </div>
 
-                    {!isSubmitted ? (
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold">
+                            {error}
+                        </div>
+                    )}
+                    {message && (
+                        <div className="mb-6 p-4 bg-green-50 border border-green-100 text-green-600 rounded-xl text-sm font-bold">
+                            {message}
+                        </div>
+                    )}
+
+                    {step === 1 ? (
+                        <form onSubmit={handleRequestOTP} className="space-y-6">
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
                                 <input
@@ -63,26 +116,56 @@ const ForgotPassword = () => {
                                 />
                             </div>
 
-                            <button className="w-full btn-primary py-4 text-lg">
-                                Send Reset Link
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full btn-primary py-4 text-lg disabled:opacity-50"
+                            >
+                                {loading ? 'Sending...' : 'Send Reset Link'}
                             </button>
                         </form>
                     ) : (
-                        <div className="bg-green-50 border border-green-100 rounded-2xl p-6 text-center animate-[scaleIn_0.3s]">
-                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
-                                ✉️
+                        <form onSubmit={handleResetPassword} className="space-y-6 animate-[fadeIn_0.3s]">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Verification Code</label>
+                                <input
+                                    type="text"
+                                    placeholder="123456"
+                                    className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 outline-none text-center font-bold tracking-widest text-lg"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    required
+                                />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Check your mail</h3>
-                            <p className="text-gray-600 mb-6">
-                                We have sent a password recovery link to <span className="font-bold">{email}</span>.
-                            </p>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">New Password</label>
+                                <input
+                                    type="password"
+                                    placeholder="New secure password"
+                                    className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 focus:border-primary focus:ring-2 outline-none"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    minLength={8}
+                                    required
+                                />
+                            </div>
+
                             <button
-                                onClick={() => setIsSubmitted(false)}
-                                className="text-primary font-bold hover:underline"
+                                type="submit"
+                                disabled={loading}
+                                className="w-full btn-primary py-4 text-lg disabled:opacity-50"
                             >
-                                Didn't receive it? Try again
+                                {loading ? 'Resetting...' : 'Set New Password'}
                             </button>
-                        </div>
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="w-full text-sm text-gray-500 hover:text-gray-700 font-medium"
+                            >
+                                Wrong email? Try again
+                            </button>
+                        </form>
                     )}
                 </div>
             </div>

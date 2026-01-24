@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 // Dedicated Simple Header for Partner Landing
 const PartnerLandingHeader = () => (
@@ -38,7 +39,7 @@ const BecomePartner = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        alert("Welcome to PartnerHub! Setting up your dashboard...");
+        toast.success("Welcome to PartnerHub! Setting up your dashboard...");
         navigate('/partner/dashboard');
     };
 

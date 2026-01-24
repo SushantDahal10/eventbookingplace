@@ -1,29 +1,83 @@
-import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 const Signup = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
+
+    // Form States
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [otp, setOtp] = useState('');
 
-    const handleSignup = (e) => {
+    // UI States
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleSignup = async (e) => {
         e.preventDefault();
-        // Mimic sending OTP
-        console.log("Sending OTP to:", email);
-        setStep(2);
+        setLoading(true);
+        setError(null);
+        try {
+            await authService.register({ fullName: name, email, password });
+            // On success, move to OTP step
+            setStep(2);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Registration failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleVerify = (e) => {
+    // Timer Logic
+    const [timer, setTimer] = React.useState(60);
+    const [canResend, setCanResend] = React.useState(false);
+
+    React.useEffect(() => {
+        let interval;
+        if (step === 2 && timer > 0) {
+            interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+        } else if (timer === 0) {
+            setCanResend(true);
+        }
+        return () => clearInterval(interval);
+    }, [step, timer]);
+
+    const handleResendOtp = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            await authService.resendOtp(email);
+            setTimer(60);
+            setCanResend(false);
+            toast.success("New code sent to your email!");
+        } catch (err) {
+            const msg = err.response?.data?.error || 'Failed to resend OTP';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerify = async (e) => {
         e.preventDefault();
-        // Mimic verification
-        if (otp.length === 6) {
-            console.log("Verified! details:", name, email, password);
-            navigate('/');
-        } else {
-            alert("Please enter a valid 6-digit code");
+        setLoading(true);
+        setError(null);
+        try {
+            if (otp.length !== 6) throw new Error("Please enter a valid 6-digit code");
+
+            await authService.verifyOtp({ email, otp });
+            toast.success("Verification successful! Logging you in...");
+            navigate('/login');
+        } catch (err) {
+            const msg = err.response?.data?.error || err.message || 'Verification failed';
+            setError(msg);
+            toast.error(msg);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -62,6 +116,12 @@ const Signup = () => {
                         <h1 className="text-4xl font-heading font-extrabold text-secondary mb-3">Create Account</h1>
                         <p className="text-text-muted">Start your journey with us today.</p>
                     </div>
+
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold">
+                            {error}
+                        </div>
+                    )}
 
                     {step === 1 ? (
                         <form onSubmit={handleSignup} className="space-y-5">
@@ -103,8 +163,12 @@ const Signup = () => {
                                 <p className="text-xs text-gray-500 mt-2">Must be at least 8 characters.</p>
                             </div>
 
-                            <button className="w-full btn-primary py-4 text-lg">
-                                Get Started
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? 'Creating Account...' : 'Get Started'}
                             </button>
                         </form>
                     ) : (
@@ -132,17 +196,30 @@ const Signup = () => {
                                 />
                             </div>
 
-                            <button className="w-full btn-primary py-4 text-lg">
-                                Verify & Continue
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? 'Verifying...' : 'Verify & Continue'}
                             </button>
 
-                            <button
-                                type="button"
-                                onClick={() => setStep(1)}
-                                className="w-full text-sm text-gray-500 hover:text-gray-700 font-medium"
-                            >
-                                Change email address
-                            </button>
+                            <div className="text-center">
+                                {canResend ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleResendOtp}
+                                        disabled={loading}
+                                        className="text-sm text-primary font-bold hover:underline disabled:opacity-50"
+                                    >
+                                        Resend Code
+                                    </button>
+                                ) : (
+                                    <p className="text-sm text-gray-400">
+                                        Resend code in <span className="font-bold text-gray-600">{timer}s</span>
+                                    </p>
+                                )}
+                            </div>
                         </form>
                     )}
 

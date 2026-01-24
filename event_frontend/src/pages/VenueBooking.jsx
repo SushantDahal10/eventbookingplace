@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
+import toast from 'react-hot-toast';
 
 // Mock Data
 const getVenueById = (id) => {
@@ -63,7 +64,7 @@ const VenueBooking = () => {
 
     const handleCheckout = (e) => {
         e.preventDefault();
-        alert(`Request sent for ${venue.name} (${durationLabel}) for Rs. ${totalCost}`);
+        toast.success(`Request sent for ${venue.name} (${durationLabel}) for Rs. ${totalCost}`);
         navigate('/');
     };
 
@@ -99,8 +100,8 @@ const VenueBooking = () => {
                                     <button
                                         onClick={() => setBookingType('hourly')}
                                         className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${bookingType === 'hourly'
-                                                ? 'bg-white text-primary shadow-sm'
-                                                : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-white text-primary shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         Specific Time Slots
@@ -108,8 +109,8 @@ const VenueBooking = () => {
                                     <button
                                         onClick={() => setBookingType('multiday')}
                                         className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${bookingType === 'multiday'
-                                                ? 'bg-white text-primary shadow-sm'
-                                                : 'text-gray-500 hover:text-gray-700'
+                                            ? 'bg-white text-primary shadow-sm'
+                                            : 'text-gray-500 hover:text-gray-700'
                                             }`}
                                     >
                                         Full Days / Multi-Day

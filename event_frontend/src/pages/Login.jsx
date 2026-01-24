@@ -1,16 +1,27 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Mimic login logic
-        console.log("Logging in with:", email, password);
-        navigate('/');
+        setLoading(true);
+        setError(null);
+        try {
+            await login({ email, password });
+            navigate('/');
+        } catch (err) {
+            setError(err.response?.data?.error || 'Login failed');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -52,6 +63,12 @@ const Login = () => {
                         <p className="text-text-muted">Enter your details to access your account.</p>
                     </div>
 
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold">
+                            {error}
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
@@ -80,8 +97,11 @@ const Login = () => {
                             />
                         </div>
 
-                        <button className="w-full btn-primary py-4 text-lg">
-                            Sign In
+                        <button
+                            disabled={loading}
+                            className="w-full btn-primary py-4 text-lg disabled:opacity-50"
+                        >
+                            {loading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </form>
 
