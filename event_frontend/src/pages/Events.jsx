@@ -6,62 +6,7 @@ import EventCard from '../features/events/components/EventCard';
 import BigCarousel from '../components/common/BigCarousel';
 
 // Mock Data
-const EVENTS = [
-    {
-        id: 1,
-        title: "KTM Rock Fest",
-        date: "Oct 26, 2026",
-        location: "Dasarath Stadium, KTM",
-        category: "Concert",
-        price: "Rs. 1500",
-        image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        id: 2,
-        title: "Patan Comedy Night",
-        date: "Nov 02, 2026",
-        location: "Patan Durbar Square",
-        category: "Comedy",
-        price: "Rs. 1000",
-        image: "https://images.unsplash.com/photo-1662999332578-1a5554de0171?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        id: 3,
-        title: "Lalitpur Futsal League",
-        date: "Nov 10, 2026",
-        location: "Lalitpur Futsal Arena",
-        category: "Sports",
-        price: "Rs. 500",
-        image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        id: 4,
-        title: "Jazz at the Mandala",
-        date: "Nov 15, 2026",
-        location: "Mandala Theater",
-        category: "Music",
-        price: "Rs. 1200",
-        image: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        id: 5,
-        title: "Tech Summit Nepal",
-        date: "Dec 01, 2026",
-        location: "Hyatt Regency, KTM",
-        category: "Thinking",
-        price: "Rs. 5000",
-        image: "https://images.unsplash.com/photo-1540575467063-17e6fc8c62d8?auto=format&fit=crop&q=80&w=600"
-    },
-    {
-        id: 6,
-        title: "Food & Wine Festival",
-        date: "Dec 10, 2026",
-        location: "Bhrikutimandap",
-        category: "Food",
-        price: "Free",
-        image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600"
-    }
-];
+import { EVENTS } from './mock';
 
 // Carousel Slides Data
 const EVENT_SLIDES = [
@@ -76,7 +21,7 @@ const EVENT_SLIDES = [
     },
     {
         id: 2,
-        image: "https://images.unsplash.com/photo-1585802525626-47b86438a06e?auto=format&fit=crop&q=80&w=1600",
+        image: "https://media.istockphoto.com/id/637268486/photo/patan.jpg?s=612x612&w=0&k=20&c=IHL_X9XMlTKCFjXMAdJTr3dLoJTN-Vvn5QsYfNtnkgc=",
         title: "Comedy Specials",
         subtitle: "Laugh out loud with top comedians.",
         tag: "Comedy",

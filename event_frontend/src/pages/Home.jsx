@@ -22,7 +22,7 @@ const POPULAR_EVENTS = [
     date: "Nov 02, 2026",
     location: "Patan Durbar Square",
     category: "Comedy",
-    image: "https://images.unsplash.com/photo-1662999332578-1a5554de0171?auto=format&fit=crop&q=80&w=600"
+    image: "https://media.istockphoto.com/id/637268486/photo/patan.jpg?s=612x612&w=0&k=20&c=IHL_X9XMlTKCFjXMAdJTr3dLoJTN-Vvn5QsYfNtnkgc="
   },
   {
     id: 3,

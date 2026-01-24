@@ -4,35 +4,38 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-
-// Mock Data Lookup (Simulating organizer-defined types)
-const getEventById = (id) => {
-    return {
-        id: id,
-        title: "KTM Rock Fest",
-        date: "Oct 26, 2026",
-        time: "18:00 PM",
-        location: "Dasarath Stadium, KTM",
-        image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=600",
-        ticketTypes: [
-            { id: 'gen', name: 'General Admission', price: 1500, desc: 'Standard entry to the ground' },
-            { id: 'fan', name: 'Fanpit', price: 3000, desc: 'Front row experience standing' },
-            { id: 'vip', name: 'VIP Seated', price: 5000, desc: 'Reserved seating with food included' }
-        ]
-    };
-};
+import api from '../services/api';
+import { EVENTS } from './mock';
 
 const Booking = () => {
     const { eventId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const event = getEventById(eventId);
+    const event = EVENTS.find(e => e.id === Number(eventId));
+
+    if (!event) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold mb-4">Event not found</h2>
+                    <Link to="/events" className="btn-primary px-6 py-2 rounded-full">Explore Events</Link>
+                </div>
+            </div>
+        );
+    }
 
     // State now tracks count for EACH ticket type: { gen: 0, fan: 2, vip: 0 }
     const [ticketCounts, setTicketCounts] = useState(
         event.ticketTypes.reduce((acc, type) => ({ ...acc, [type.id]: 0 }), {})
     );
     const [paymentMethod, setPaymentMethod] = useState('esewa');
+
+    // Attendee Details State
+    const [checkoutDetails, setCheckoutDetails] = useState({
+        fullName: user?.fullName || '',
+        email: user?.email || '',
+        phoneNumber: ''
+    });
 
     // Derived values
     const subtotal = event.ticketTypes.reduce((total, type) => {
@@ -52,7 +55,15 @@ const Booking = () => {
         }));
     };
 
-    const handleCheckout = (e) => {
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setCheckoutDetails(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    const handleCheckout = async (e) => {
         e.preventDefault();
 
         if (!user) {
@@ -66,7 +77,66 @@ const Booking = () => {
             return;
         }
 
+        // Validation for Attendee Details
+        if (!checkoutDetails.fullName || !checkoutDetails.email || !checkoutDetails.phoneNumber) {
+            toast.error("Please fill in all attendee details");
+            return;
+        }
+
         // Proceed (Mock)
+        if (paymentMethod === 'esewa') {
+            try {
+                const toastId = toast.loading("Initiating eSewa Payment...");
+
+                const response = await api.post('/payment/esewa/initiate', {
+                    amount: subtotal,
+                    serviceCharge: serviceFee,
+                    deliveryCharge: 0,
+                    taxAmount: 0,
+                    userId: user.id, // Assuming user object has id
+                    eventDetails: {
+                        title: event.title,
+                        date: event.date,
+                        location: event.location,
+                        tickets: event.ticketTypes
+                            .filter(type => ticketCounts[type.id] > 0)
+                            .map(type => ({
+                                name: type.name,
+                                price: type.price,
+                                quantity: ticketCounts[type.id]
+                            })),
+                        count: totalTickets
+                    }
+                });
+
+                if (response.data.success) {
+                    const params = response.data.paymentData;
+
+                    const form = document.createElement("form");
+                    form.setAttribute("method", "POST");
+                    form.setAttribute("action", "https://rc-epay.esewa.com.np/api/epay/main/v2/form");
+
+                    for (const key in params) {
+                        const hiddenField = document.createElement("input");
+                        hiddenField.setAttribute("type", "hidden");
+                        hiddenField.setAttribute("name", key);
+                        hiddenField.setAttribute("value", params[key]);
+                        form.appendChild(hiddenField);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    toast.dismiss(toastId);
+                } else {
+                    toast.error("Failed to initiate payment", { id: toastId });
+                }
+            } catch (error) {
+                console.error("Payment Error", error);
+                toast.error("Something went wrong");
+            }
+            return;
+        }
+
         toast.success(`Processing payment of Rs. ${total}`);
         navigate('/');
     };
@@ -142,15 +212,36 @@ const Booking = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1">
                                         <label className="text-sm font-bold text-gray-700">Full Name</label>
-                                        <input type="text" placeholder="John Doe" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                                        <input
+                                            type="text"
+                                            name="fullName"
+                                            value={checkoutDetails.fullName}
+                                            onChange={handleInputChange}
+                                            placeholder="John Doe"
+                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-sm font-bold text-gray-700">Email Address</label>
-                                        <input type="email" placeholder="john@example.com" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={checkoutDetails.email}
+                                            onChange={handleInputChange}
+                                            placeholder="john@example.com"
+                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        />
                                     </div>
                                     <div className="space-y-1 md:col-span-2">
                                         <label className="text-sm font-bold text-gray-700">Phone Number</label>
-                                        <input type="tel" placeholder="+977 9800000000" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                                        <input
+                                            type="tel"
+                                            name="phoneNumber"
+                                            value={checkoutDetails.phoneNumber}
+                                            onChange={handleInputChange}
+                                            placeholder="+977 9800000000"
+                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -164,27 +255,13 @@ const Booking = () => {
                                     </h2>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <button
                                         onClick={() => setPaymentMethod('esewa')}
-                                        className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'esewa' ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
+                                        className={`p-6 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all border-primary bg-primary/5`}
                                     >
-                                        <div className="font-bold text-green-600">eSewa</div>
-                                        <span className="text-xs text-gray-500">Mobile Wallet</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('khalti')}
-                                        className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'khalti' ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
-                                    >
-                                        <div className="font-bold text-purple-600">Khalti</div>
-                                        <span className="text-xs text-gray-500">Mobile Wallet</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('card')}
-                                        className={`p-4 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
-                                    >
-                                        <div className="font-bold text-blue-600">Card</div>
-                                        <span className="text-xs text-gray-500">Visa / Mastercard</span>
+                                        <div className="font-bold text-green-600 text-lg">eSewa</div>
+                                        <span className="text-sm text-gray-500">Fast & Secure Mobile Wallet Payment</span>
                                     </button>
                                 </div>
                             </div>

@@ -18,12 +18,15 @@ const Signup = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const [signupToken, setSignupToken] = useState(null);
+
     const handleSignup = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
         try {
-            await authService.register({ fullName: name, email, password });
+            const response = await authService.register({ fullName: name, email, password });
+            setSignupToken(response.signupToken);
             // On success, move to OTP step
             setStep(2);
         } catch (err) {
@@ -71,8 +74,8 @@ const Signup = () => {
         try {
             if (otp.length !== 6) throw new Error("Please enter a valid 6-digit code");
 
-            await authService.verifyOtp({ email, otp });
-            toast.success("Verification successful! Logging you in...");
+            await authService.verifyOtp({ email, otp, signupToken });
+            toast.success("Verification successful! You can now log in.");
             navigate('/login');
         } catch (err) {
             const msg = err.response?.data?.error || err.message || 'Verification failed';

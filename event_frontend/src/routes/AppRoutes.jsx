@@ -16,9 +16,7 @@ import Terms from '../pages/Terms';
 import Privacy from '../pages/Privacy';
 import MyBookings from '../pages/MyBookings';
 import Chat from '../pages/Chat';
-// import BecomePartner from '../pages/BecomePartner';
-// import PartnerDashboard from '../pages/partner/PartnerDashboard';
-// import CreateEvent from '../pages/partner/CreateEvent';
+import PaymentSuccess from '../pages/PaymentSuccess';
 
 const AppRoutes = () => {
     return (
@@ -35,6 +33,7 @@ const AppRoutes = () => {
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/booking/:eventId" element={<Booking />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/profile/bookings" element={<MyBookings />} />

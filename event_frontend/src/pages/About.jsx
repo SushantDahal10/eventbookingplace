@@ -16,7 +16,7 @@ const ABOUT_SLIDES = [
     },
     {
         id: 2,
-        image: "https://images.unsplash.com/photo-1522071820081-00ca6e303db2?auto=format&fit=crop&q=80&w=1600",
+        image: "https://media.istockphoto.com/id/637268486/photo/patan.jpg?s=612x612&w=0&k=20&c=IHL_X9XMlTKCFjXMAdJTr3dLoJTN-Vvn5QsYfNtnkgc=",
         title: "Our Mission",
         subtitle: "To revolutionize how Nepal experiences entertainment.",
         tag: "Vision",
