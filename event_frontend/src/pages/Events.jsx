@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom'; // No Link import needed if not used directly
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import EventCard from '../features/events/components/EventCard';
 import BigCarousel from '../components/common/BigCarousel';
+import api from '../services/api';
 
-// Mock Data
-import { EVENTS } from './mock';
-
-// Carousel Slides Data
+// Carousel Slides Data (Using Static or could also be fetched)
 const EVENT_SLIDES = [
     {
         id: 1,
@@ -16,8 +14,8 @@ const EVENT_SLIDES = [
         title: "Upcoming Concerts",
         subtitle: "Feel the energy of live music.",
         tag: "Music",
-        primaryAction: { text: "Book Feature Ticket", link: "/booking/1", icon: "🎟️" },
-        secondaryAction: { text: "View Details", link: "/events/1" }
+        primaryAction: { text: "View Details", link: "/events", icon: "🎟️" },
+        secondaryAction: { text: "Browse All", link: "/events" }
     },
     {
         id: 2,
@@ -25,17 +23,8 @@ const EVENT_SLIDES = [
         title: "Comedy Specials",
         subtitle: "Laugh out loud with top comedians.",
         tag: "Comedy",
-        primaryAction: { text: "Book Feature Ticket", link: "/booking/2", icon: "🎟️" },
-        secondaryAction: { text: "View Details", link: "/events/2" }
-    },
-    {
-        id: 3,
-        image: "https://images.unsplash.com/photo-1526676037777-05a232554f77?auto=format&fit=crop&q=80&w=1600",
-        title: "Sports Tournaments",
-        subtitle: "Cheer for your favorite teams.",
-        tag: "Sports",
-        primaryAction: { text: "Book Feature Ticket", link: "/booking/3", icon: "🎟️" },
-        secondaryAction: { text: "View Details", link: "/events/3" }
+        primaryAction: { text: "View Details", link: "/events", icon: "🎟️" },
+        secondaryAction: { text: "Browse All", link: "/events" }
     }
 ];
 
@@ -44,6 +33,8 @@ const Events = () => {
     const queryParams = new URLSearchParams(search);
     const initialCategory = queryParams.get("category");
 
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState(initialCategory || "All");
     const [searchQuery, setSearchQuery] = useState("");
     const resultsRef = useRef(null);
@@ -55,7 +46,32 @@ const Events = () => {
         }
     }, [initialCategory]);
 
-    const filteredEvents = EVENTS.filter(event => {
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const response = await api.get('/events');
+                // Map backend data to frontend EventCard expectations if needed
+                // Backend: title, location, event_date, ticket_price, id (uuid)
+                // Frontend Card expects: title, location, date, price, id, image (optional)
+                const mappedEvents = response.data.events.map(e => ({
+                    ...e,
+                    date: new Date(e.event_date).toLocaleDateString(),
+                    price: e.ticket_price,
+                    image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000", // Placeholder/Random
+                    category: "Music" // Default category as it's not in schema
+                }));
+                setEvents(mappedEvents);
+            } catch (error) {
+                console.error("Failed to fetch events", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, []);
+
+    const filteredEvents = events.filter(event => {
         const matchesCategory = selectedCategory === "All" || event.category === selectedCategory;
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             event.location.toLowerCase().includes(searchQuery.toLowerCase());
@@ -114,11 +130,20 @@ const Events = () => {
                     <p className="text-text-muted">Found {filteredEvents.length} events matching your criteria.</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 min-h-[400px]">
-                    {filteredEvents.map(event => (
-                        <EventCard key={event.id} event={event} />
-                    ))}
-                </div>
+                {loading ? (
+                    <div className="text-center py-20 font-bold text-gray-400">Loading events...</div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 min-h-[400px]">
+                        {filteredEvents.map(event => (
+                            <EventCard key={event.id} event={event} />
+                        ))}
+                        {filteredEvents.length === 0 && (
+                            <div className="col-span-full text-center py-10 text-gray-500">
+                                No events found.
+                            </div>
+                        )}
+                    </div>
+                )}
             </main>
 
             <Footer />

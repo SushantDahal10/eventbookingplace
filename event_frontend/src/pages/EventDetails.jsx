@@ -1,12 +1,46 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { EVENTS } from "./mock";
+import api from '../services/api';
 
 const EventDetails = () => {
     const { id } = useParams();
-    const event = EVENTS.find(e => e.id === Number(id));
+    const [event, setEvent] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchEvent = async () => {
+            try {
+                const response = await api.get(`/events/${id}`);
+                const data = response.data.event;
+                // Normalize data
+                setEvent({
+                    ...data,
+                    date: new Date(data.event_date).toLocaleDateString(),
+                    time: new Date(data.event_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    price: data.ticket_price,
+                    tags: ['Event', 'Live', 'Nepal'], // Placeholder as no tags in DB
+                    image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000",
+                    description: data.description || "No description provided."
+                });
+            } catch (error) {
+                console.error("Failed to fetch event", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (id) fetchEvent();
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-2xl font-bold">Loading...</div>
+            </div>
+        );
+    }
 
     if (!event) {
         return (
@@ -41,6 +75,7 @@ const EventDetails = () => {
                             <h1 className="text-5xl font-extrabold mb-4">{event.title}</h1>
                             <p className="mb-2">{event.date} • {event.time}</p>
                             <p>{event.location}</p>
+                            <p className="text-sm opacity-80 mt-2">Org: {event.partners?.organization_name}</p>
                         </div>
                     </div>
                 </div>

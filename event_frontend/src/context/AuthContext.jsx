@@ -34,12 +34,7 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    const googleLogin = async (credential) => {
-        const data = await authService.googleLogin(credential);
-        setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        return data;
-    };
+
 
     const logout = async () => {
         try {
@@ -52,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, googleLogin, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

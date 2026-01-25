@@ -93,22 +93,10 @@ const Booking = () => {
                     serviceCharge: serviceFee,
                     deliveryCharge: 0,
                     taxAmount: 0,
-                    userId: user.id, // Assuming user object has id
-                    customerName: checkoutDetails.fullName,
-                    customerPhone: checkoutDetails.phoneNumber,
-                    eventDetails: {
-                        title: event.title,
-                        date: event.date,
-                        location: event.location,
-                        tickets: event.ticketTypes
-                            .filter(type => ticketCounts[type.id] > 0)
-                            .map(type => ({
-                                name: type.name,
-                                price: type.price,
-                                quantity: ticketCounts[type.id]
-                            })),
-                        count: totalTickets
-                    }
+                    userId: user.id,
+                    eventId: event.id || 1, // Fallback for mock if needed, though backend fails if not UUID
+                    quantity: totalTickets,
+                    // customerDetails: checkoutDetails // Not used in new schema directly
                 });
 
                 if (response.data.success) {

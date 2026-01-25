@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { GoogleLogin } from '@react-oauth/google';
+
 
 const Login = () => {
     const navigate = useNavigate();
-    const { login, googleLogin } = useAuth();
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -27,12 +27,7 @@ const Login = () => {
     };
 
     const handleGoogleSuccess = async (credentialResponse) => {
-        try {
-            await googleLogin(credentialResponse.credential);
-            navigate('/');
-        } catch (err) {
-            setError(err.response?.data?.error || 'Google Login failed');
-        }
+        // Removed Google Login
     };
 
     return (
@@ -134,23 +129,7 @@ const Login = () => {
                         </button>
                     </form>
 
-                    <div className="my-8 flex items-center gap-4">
-                        <div className="h-px bg-gray-200 flex-grow"></div>
-                        <span className="text-xs text-gray-400 font-bold uppercase">Or continue with</span>
-                        <div className="h-px bg-gray-200 flex-grow"></div>
-                    </div>
 
-                    <div className="flex justify-center">
-                        <GoogleLogin
-                            onSuccess={handleGoogleSuccess}
-                            onError={() => setError("Google Login Failed")}
-                            useOneTap
-                            theme="outline"
-                            size="large"
-                            text="continue_with"
-                            width="250"
-                        />
-                    </div>
 
                     <p className="mt-8 text-center text-sm text-gray-600">
                         Don't have an account? <Link to="/signup" className="text-primary font-bold hover:underline">Sign up for free</Link>
