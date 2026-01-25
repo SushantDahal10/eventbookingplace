@@ -132,6 +132,13 @@ CREATE TABLE public.partners (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+ALTER TABLE public.partners
+DROP CONSTRAINT partners_status_check;
+
+ALTER TABLE public.partners
+ADD CONSTRAINT partners_status_check
+CHECK (status IN ('pending','approved','rejected','resubmitted'));
+
 
 --------------------------------------------------
 -- PARTNER INDEXES
@@ -240,20 +247,112 @@ CREATE TABLE public.events (
 
   location TEXT NOT NULL,
 
-  ticket_price NUMERIC(10,2) NOT NULL
-    CHECK (ticket_price >= 0),
+  ticket_price NUMERIC(10,2) NOT NULL DEFAULT 0, -- Kept for legacy/base price or if tiers are empty
+  
+  tags TEXT[] DEFAULT '{}',
 
-  total_seats INTEGER NOT NULL
-    CHECK (total_seats > 0),
+  -- New columns for image handling ref (though we use event_images table)
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
 
-  available_seats INTEGER NOT NULL
-    CHECK (available_seats >= 0),
+-- We removed ticket_price drop because user might want a base price, 
+-- but actually the walkthrough said we use tiers. 
+-- The previous schema had:
+-- DROP COLUMN ticket_price, total_seats, available_seats;
+-- I will respect that pattern but add tags before the drop.
 
-  status TEXT DEFAULT 'active'
-    CHECK (status IN ('active','cancelled','completed')),
+ALTER TABLE public.events
+ADD COLUMN category TEXT;
+-- category can be distinct from tags if needed, or derived. 
+-- User asked for category. I will keep it.
+
+ALTER TABLE public.events
+DROP COLUMN ticket_price,
+DROP COLUMN total_seats,
+DROP COLUMN available_seats;
+
+
+CREATE TABLE public.event_images (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+
+  event_id UUID NOT NULL
+    REFERENCES public.events(id)
+    ON DELETE CASCADE,
+
+  image_url TEXT NOT NULL,
+
+  image_type TEXT NOT NULL
+    CHECK (image_type IN ('cover','gallery')),
 
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
+
+
+CREATE INDEX idx_event_images_event
+ON public.event_images(event_id);
+
+CREATE INDEX idx_event_images_type
+ON public.event_images(image_type);
+
+
+CREATE TABLE public.ticket_tiers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+
+  event_id UUID NOT NULL
+    REFERENCES public.events(id)
+    ON DELETE CASCADE,
+
+  tier_name TEXT NOT NULL,
+
+  price NUMERIC(10,2) NOT NULL
+    CHECK (price >= 0),
+
+  total_quantity INTEGER NOT NULL
+    CHECK (total_quantity > 0),
+
+  available_quantity INTEGER NOT NULL
+    CHECK (available_quantity >= 0),
+
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+
+CREATE INDEX idx_ticket_tiers_event
+ON public.ticket_tiers(event_id);
+
+CREATE INDEX idx_ticket_tiers_price
+ON public.ticket_tiers(event_id, price);
+
+
+CREATE OR REPLACE FUNCTION limit_gallery_images()
+RETURNS TRIGGER AS $$
+BEGIN
+
+  IF NEW.image_type = 'gallery' THEN
+
+    IF (
+      SELECT COUNT(*)
+      FROM event_images
+      WHERE event_id = NEW.event_id
+        AND image_type = 'gallery'
+    ) >= 3 THEN
+
+      RAISE EXCEPTION 'Maximum 3 gallery images allowed per event';
+
+    END IF;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_limit_gallery_images
+BEFORE INSERT ON event_images
+FOR EACH ROW
+EXECUTE FUNCTION limit_gallery_images();
+
 
 
 --------------------------------------------------
@@ -299,6 +398,100 @@ CREATE TABLE public.bookings (
 
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
+
+CREATE TABLE public.booking_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+
+  booking_id UUID NOT NULL
+    REFERENCES public.bookings(id)
+    ON DELETE CASCADE,
+
+  tier_id UUID NOT NULL
+    REFERENCES public.ticket_tiers(id)
+    ON DELETE CASCADE,
+
+  quantity INTEGER NOT NULL
+    CHECK (quantity > 0),
+
+  price_per_ticket NUMERIC(10,2) NOT NULL,
+
+  total_amount NUMERIC(12,2) NOT NULL,
+
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+
+  UNIQUE (booking_id, tier_id)
+);
+
+ALTER TABLE public.bookings
+DROP COLUMN price_per_ticket,
+DROP COLUMN quantity;
+
+DROP TRIGGER IF EXISTS trg_reduce_tier_quantity ON public.bookings;
+DROP FUNCTION IF EXISTS reduce_tier_quantity_after_booking();
+
+
+CREATE OR REPLACE FUNCTION reduce_tier_after_item()
+RETURNS TRIGGER AS $$
+BEGIN
+
+  IF EXISTS (
+    SELECT 1
+    FROM bookings
+    WHERE id = NEW.booking_id
+      AND status = 'paid'
+  ) THEN
+
+    UPDATE ticket_tiers
+    SET available_quantity = available_quantity - NEW.quantity
+    WHERE id = NEW.tier_id
+      AND available_quantity >= NEW.quantity;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Not enough tickets in this tier';
+    END IF;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_reduce_tier_after_item
+AFTER INSERT ON booking_items
+FOR EACH ROW
+EXECUTE FUNCTION reduce_tier_after_item();
+
+CREATE OR REPLACE FUNCTION reduce_tiers_on_payment()
+RETURNS TRIGGER AS $$
+BEGIN
+
+  IF OLD.status <> 'paid' AND NEW.status = 'paid' THEN
+
+    UPDATE ticket_tiers t
+    SET available_quantity = t.available_quantity - bi.quantity
+    FROM booking_items bi
+    WHERE bi.booking_id = NEW.id
+      AND bi.tier_id = t.id
+      AND t.available_quantity >= bi.quantity;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Insufficient tickets for one or more tiers';
+    END IF;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_reduce_tiers_on_payment
+AFTER UPDATE ON public.bookings
+FOR EACH ROW
+EXECUTE FUNCTION reduce_tiers_on_payment();
+
+
 
 
 --------------------------------------------------

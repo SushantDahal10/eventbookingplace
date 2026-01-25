@@ -10,7 +10,8 @@ exports.getAllEvents = async (req, res) => {
             .from('events')
             .select(`
                 *,
-                partners ( organization_name, official_email )
+                partners ( organization_name, official_email ),
+                event_images ( * )
             `)
             .eq('status', 'active')
             .order('event_date', { ascending: true });
@@ -44,7 +45,9 @@ exports.getEventById = async (req, res) => {
             .from('events')
             .select(`
                 *,
-                partners ( organization_name, official_email, official_phone )
+                partners ( organization_name, official_email, official_phone ),
+                ticket_tiers ( * ),
+                event_images ( * )
             `)
             .eq('id', id)
             .single();

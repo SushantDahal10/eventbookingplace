@@ -53,13 +53,18 @@ const Events = () => {
                 // Map backend data to frontend EventCard expectations if needed
                 // Backend: title, location, event_date, ticket_price, id (uuid)
                 // Frontend Card expects: title, location, date, price, id, image (optional)
-                const mappedEvents = response.data.events.map(e => ({
-                    ...e,
-                    date: new Date(e.event_date).toLocaleDateString(),
-                    price: e.ticket_price,
-                    image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000", // Placeholder/Random
-                    category: "Music" // Default category as it's not in schema
-                }));
+                const mappedEvents = response.data.events.map(e => {
+                    const coverImage = e.event_images?.find(img => img.image_type === 'cover')?.image_url
+                        || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000";
+
+                    return {
+                        ...e,
+                        date: new Date(e.event_date).toLocaleDateString(),
+                        price: e.ticket_tiers?.[0]?.price || 'N/A', // Show starting price
+                        image: coverImage,
+                        category: e.tags?.[1] || "Music" // Derive category from tags (index 1 usually category in our convention)
+                    };
+                });
                 setEvents(mappedEvents);
             } catch (error) {
                 console.error("Failed to fetch events", error);

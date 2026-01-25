@@ -58,26 +58,48 @@ const PaymentSuccess = () => {
 
                     {status === 'success' && (
                         <>
-                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-[bounce_1s_infinite]">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
-                            <p className="text-gray-600 mb-8">
-                                Thank you for your booking. Your transaction has been confirmed.
+                            <h1 className="text-3xl font-heading font-black text-gray-900 mb-2">Ticket Booked! 🎉</h1>
+                            <p className="text-lg text-gray-600 mb-6 font-medium">
+                                You are all set. See you at the event!
                             </p>
 
-                            <div className="bg-gray-50 rounded-xl p-4 mb-8">
-                                <p className="text-sm text-gray-500 mb-1">Redirecting to your bookings...</p>
+                            <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 mb-8 text-left space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">📧</span>
+                                    <div>
+                                        <div className="font-bold text-gray-900">Check your Email</div>
+                                        <div className="text-sm text-gray-600">We've sent the ticket details to your inbox.</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">📱</span>
+                                    <div>
+                                        <div className="font-bold text-gray-900">SMS Confirmation</div>
+                                        <div className="text-sm text-gray-600">A confirmation has also been sent to your phone.</div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <button
-                                onClick={() => navigate('/profile/bookings')}
-                                className="w-full btn-primary py-3"
-                            >
-                                View My Bookings Now
-                            </button>
+                            <div className="space-y-3">
+                                <p className="text-sm text-gray-400 mb-1">Redirecting you to your tickets in a moment...</p>
+                                <button
+                                    onClick={() => navigate('/profile/bookings')}
+                                    className="w-full btn-primary py-4 text-lg shadow-xl shadow-primary/30"
+                                >
+                                    View My Ticket ➜
+                                </button>
+                                <button
+                                    onClick={() => navigate('/')}
+                                    className="w-full py-3 text-gray-500 font-bold hover:text-gray-800 transition-colors"
+                                >
+                                    Back to Home
+                                </button>
+                            </div>
                         </>
                     )}
 

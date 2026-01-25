@@ -1,66 +1,96 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import api from '../services/api';
-import { EVENTS } from './mock';
+
 
 const Booking = () => {
     const { eventId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const event = EVENTS.find(e => e.id === Number(eventId));
 
-    if (!event) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">Event not found</h2>
-                    <Link to="/events" className="btn-primary px-6 py-2 rounded-full">Explore Events</Link>
-                </div>
-            </div>
-        );
-    }
-
-    // State now tracks count for EACH ticket type: { gen: 0, fan: 2, vip: 0 }
-    const [ticketCounts, setTicketCounts] = useState(
-        event.ticketTypes.reduce((acc, type) => ({ ...acc, [type.id]: 0 }), {})
-    );
+    // State
+    const [event, setEvent] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [ticketCounts, setTicketCounts] = useState({});
     const [paymentMethod, setPaymentMethod] = useState('esewa');
-
-    // Attendee Details State
     const [checkoutDetails, setCheckoutDetails] = useState({
         fullName: user?.fullName || '',
         email: user?.email || '',
         phoneNumber: ''
     });
 
+    // Fetch Event Data
+    useEffect(() => {
+        const fetchEvent = async () => {
+            try {
+                const response = await api.get(`/events/${eventId}`);
+                if (response.data.success) {
+                    const eventData = response.data.event;
+
+                    // Extract cover image
+                    const coverImage = eventData.event_images?.find(img => img.image_type === 'cover')?.image_url || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000";
+
+                    setEvent({
+                        ...eventData,
+                        image: coverImage
+                    });
+
+                    // Initialize counts for each tier
+                    const initialCounts = {};
+                    if (eventData.ticket_tiers) {
+                        eventData.ticket_tiers.forEach(tier => {
+                            initialCounts[tier.id] = 0;
+                        });
+                    }
+                    setTicketCounts(initialCounts);
+                }
+            } catch (error) {
+                console.error("Failed to fetch event", error);
+                toast.error("Failed to load event details");
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (eventId) fetchEvent();
+    }, [eventId]);
+
+    // Handle early returns
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (!event) return <div className="min-h-screen flex items-center justify-center">Event not found</div>;
+
     // Derived values
-    const subtotal = event.ticketTypes.reduce((total, type) => {
-        return total + (type.price * (ticketCounts[type.id] || 0));
-    }, 0);
+    const subtotal = event.ticket_tiers ? event.ticket_tiers.reduce((total, tier) => {
+        return total + (Number(tier.price) * (ticketCounts[tier.id] || 0));
+    }, 0) : 0;
 
-    // Ensure at least one ticket is selected to proceed
     const totalTickets = Object.values(ticketCounts).reduce((a, b) => a + b, 0);
-
-    const serviceFee = Math.round(subtotal * 0.05); // 5% fee
+    const serviceFee = 0; // Backend handles fees or set to 0 strictly
     const total = subtotal + serviceFee;
 
-    const handleCountChange = (typeId, delta) => {
+    const handleCountChange = (tierId, delta) => {
+        // Check available quantity
+        const tier = event.ticket_tiers.find(t => t.id === tierId);
+        const currentCount = ticketCounts[tierId] || 0;
+        const newCount = Math.max(0, currentCount + delta);
+
+        if (newCount > tier.available_quantity) {
+            toast.error(`Only ${tier.available_quantity} tickets available`);
+            return;
+        }
+
         setTicketCounts(prev => ({
             ...prev,
-            [typeId]: Math.max(0, (prev[typeId] || 0) + delta)
+            [tierId]: newCount
         }));
     };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setCheckoutDetails(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setCheckoutDetails(prev => ({ ...prev, [name]: value }));
     };
 
     const handleCheckout = async (e) => {
@@ -77,31 +107,38 @@ const Booking = () => {
             return;
         }
 
-        // Validation for Attendee Details
+        // Validate Attendee Details
         if (!checkoutDetails.fullName || !checkoutDetails.email || !checkoutDetails.phoneNumber) {
-            toast.error("Please fill in all attendee details");
+            toast.error("Please fill in all attendee details (Name, Email, Phone)");
+            // Optional: scroll to the form
+            document.getElementById('attendee-details')?.scrollIntoView({ behavior: 'smooth' });
             return;
         }
 
-        // Proceed (Mock)
         if (paymentMethod === 'esewa') {
             try {
                 const toastId = toast.loading("Initiating eSewa Payment...");
 
+                // Construct Booking Items
+                const bookingItems = Object.entries(ticketCounts)
+                    .filter(([_, qty]) => qty > 0)
+                    .map(([tierId, qty]) => ({
+                        tierId,
+                        quantity: qty
+                    }));
+
                 const response = await api.post('/payment/esewa/initiate', {
-                    amount: subtotal,
-                    serviceCharge: serviceFee,
+                    bookingItems,
+                    eventId: event.id,
+                    userId: user.id,
+                    amount: total, // For reference/validation only
+                    serviceCharge: 0,
                     deliveryCharge: 0,
                     taxAmount: 0,
-                    userId: user.id,
-                    eventId: event.id || 1, // Fallback for mock if needed, though backend fails if not UUID
-                    quantity: totalTickets,
-                    // customerDetails: checkoutDetails // Not used in new schema directly
                 });
 
                 if (response.data.success) {
                     const params = response.data.paymentData;
-
                     const form = document.createElement("form");
                     form.setAttribute("method", "POST");
                     form.setAttribute("action", "https://rc-epay.esewa.com.np/api/epay/main/v2/form");
@@ -118,17 +155,13 @@ const Booking = () => {
                     form.submit();
                     toast.dismiss(toastId);
                 } else {
-                    toast.error("Failed to initiate payment", { id: toastId });
+                    toast.error(response.data.message || "Failed to initiate payment", { id: toastId });
                 }
             } catch (error) {
                 console.error("Payment Error", error);
-                toast.error("Something went wrong");
+                toast.error(error.response?.data?.message || "Something went wrong");
             }
-            return;
         }
-
-        toast.success(`Processing payment of Rs. ${total}`);
-        navigate('/');
     };
 
     return (
@@ -162,25 +195,39 @@ const Booking = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    {event.ticketTypes.map(type => (
-                                        <div key={type.id} className={`flex justify-between items-center p-4 rounded-xl border transition-colors ${ticketCounts[type.id] > 0 ? 'bg-primary/5 border-primary/30' : 'bg-gray-50 border-gray-100'}`}>
-                                            <div>
-                                                <div className="font-bold text-gray-900">{type.name}</div>
-                                                <div className="text-sm text-gray-500">{type.desc}</div>
+                                    {event.ticket_tiers && event.ticket_tiers.map(tier => (
+                                        <div key={tier.id} className={`flex justify-between items-center p-4 rounded-xl border transition-all ${ticketCounts[tier.id] > 0 ? 'bg-primary/5 border-primary/30 shadow-sm' : 'bg-white border-gray-100'}`}>
+                                            <div className="flex-grow">
+                                                <div className="font-bold text-gray-900 text-lg">{tier.tier_name}</div>
+                                                <div className="text-sm font-medium mt-1">
+                                                    {tier.available_quantity > 20 ? (
+                                                        <span className="text-green-600 flex items-center gap-1">
+                                                            Selling Fast <span className="text-lg">🔥</span>
+                                                        </span>
+                                                    ) : tier.available_quantity > 0 ? (
+                                                        <span className="text-orange-600 font-bold flex items-center gap-1">
+                                                            Only {tier.available_quantity} left <span className="text-lg">⚡</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-red-500 font-bold">Sold Out ❌</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className="font-bold text-gray-900">Rs. {type.price}</span>
-                                                <div className="flex items-center gap-3 bg-white rounded-lg p-1 border border-gray-200">
+                                            <div className="flex flex-col items-end gap-3">
+                                                <span className="font-headings font-black text-xl text-secondary">Rs. {tier.price}</span>
+                                                <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-200">
                                                     <button
-                                                        onClick={() => handleCountChange(type.id, -1)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                                        onClick={() => handleCountChange(tier.id, -1)}
+                                                        className="w-9 h-9 flex items-center justify-center rounded-md bg-white text-gray-600 shadow-sm hover:text-primary transition-colors disabled:opacity-50"
+                                                        disabled={!ticketCounts[tier.id]}
                                                     >
                                                         -
                                                     </button>
-                                                    <span className="font-bold w-4 text-center">{ticketCounts[type.id]}</span>
+                                                    <span className="font-bold w-6 text-center text-lg">{ticketCounts[tier.id] || 0}</span>
                                                     <button
-                                                        onClick={() => handleCountChange(type.id, 1)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary-dark transition-colors"
+                                                        onClick={() => handleCountChange(tier.id, 1)}
+                                                        className="w-9 h-9 flex items-center justify-center rounded-md bg-primary text-white shadow-md hover:bg-primary-dark transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        disabled={ticketCounts[tier.id] >= tier.available_quantity}
                                                     >
                                                         +
                                                     </button>
@@ -192,7 +239,7 @@ const Booking = () => {
                             </div>
 
                             {/* Step 2: Details */}
-                            <div className="card-premium p-8">
+                            <div id="attendee-details" className="card-premium p-8">
                                 <div className="mb-6">
                                     <h2 className="text-xl font-bold text-secondary flex items-center gap-3">
                                         <span className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">2</span>
@@ -265,20 +312,20 @@ const Booking = () => {
                                     <h3 className="font-bold text-gray-900 mb-4 pb-4 border-b border-gray-100">Order Summary</h3>
 
                                     <div className="flex gap-4 mb-6">
-                                        <img src={event.image} alt={event.title} className="w-20 h-20 rounded-lg object-cover" />
+                                        <img src={event.image || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=1000"} alt={event.title} className="w-20 h-20 rounded-lg object-cover" />
                                         <div>
                                             <h4 className="font-bold text-gray-900 line-clamp-2 leading-tight mb-1">{event.title}</h4>
-                                            <p className="text-sm text-gray-500">{event.date}</p>
+                                            <p className="text-sm text-gray-500">{new Date(event.event_date).toLocaleDateString()}</p>
                                             <p className="text-sm text-gray-500">{event.location}</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3 text-sm text-gray-600">
-                                        {event.ticketTypes.map(type => (
-                                            ticketCounts[type.id] > 0 && (
-                                                <div key={type.id} className="flex justify-between">
-                                                    <span>{ticketCounts[type.id]} x {type.name}</span>
-                                                    <span className="font-medium">Rs. {type.price * ticketCounts[type.id]}</span>
+                                        {event.ticket_tiers && event.ticket_tiers.map(tier => (
+                                            ticketCounts[tier.id] > 0 && (
+                                                <div key={tier.id} className="flex justify-between">
+                                                    <span>{ticketCounts[tier.id]} x {tier.tier_name}</span>
+                                                    <span className="font-medium">Rs. {Number(tier.price) * ticketCounts[tier.id]}</span>
                                                 </div>
                                             )
                                         ))}

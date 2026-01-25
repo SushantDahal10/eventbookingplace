@@ -19,6 +19,20 @@ setInterval(async () => {
     }
 }, cleanupInterval);
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
+const startServer = (initialPort) => {
+    let currentPort = initialPort;
+    const server = app.listen(currentPort, () => {
+        console.log(`Server running on port ${currentPort}`);
+    });
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`Port ${currentPort} is busy, trying ${currentPort + 1}...`);
+            startServer(currentPort + 1);
+        } else {
+            console.error('Server failed to start:', err);
+        }
+    });
+};
+
+startServer(port);
