@@ -133,6 +133,13 @@ CREATE TABLE public.partners (
 );
 
 ALTER TABLE public.partners
+ADD COLUMN city TEXT,
+ADD COLUMN full_address TEXT,
+ADD COLUMN state TEXT,
+ADD COLUMN country TEXT;
+
+
+ALTER TABLE public.partners
 DROP CONSTRAINT partners_status_check;
 
 ALTER TABLE public.partners
@@ -140,6 +147,11 @@ ADD CONSTRAINT partners_status_check
 CHECK (status IN ('pending','approved','rejected','resubmitted'));
 
 
+ALTER TABLE public.otps DROP CONSTRAINT IF EXISTS otps_purpose_check;
+
+ALTER TABLE public.otps 
+ADD CONSTRAINT otps_purpose_check 
+CHECK (purpose IN ('password_reset', 'resubmission', 'registration'));
 --------------------------------------------------
 -- PARTNER INDEXES
 --------------------------------------------------
@@ -247,24 +259,34 @@ CREATE TABLE public.events (
 
   location TEXT NOT NULL,
 
-  ticket_price NUMERIC(10,2) NOT NULL DEFAULT 0, -- Kept for legacy/base price or if tiers are empty
-  
-  tags TEXT[] DEFAULT '{}',
+  ticket_price NUMERIC(10,2) NOT NULL
+    CHECK (ticket_price >= 0),
 
-  -- New columns for image handling ref (though we use event_images table)
+  total_seats INTEGER NOT NULL
+    CHECK (total_seats > 0),
+
+  available_seats INTEGER NOT NULL
+    CHECK (available_seats >= 0),
+
+  status TEXT DEFAULT 'active'
+    CHECK (status IN ('active','cancelled','completed')),
+
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
--- We removed ticket_price drop because user might want a base price, 
--- but actually the walkthrough said we use tiers. 
--- The previous schema had:
--- DROP COLUMN ticket_price, total_seats, available_seats;
--- I will respect that pattern but add tags before the drop.
+ALTER TABLE public.events
+ADD COLUMN full_address TEXT,
+ADD COLUMN city TEXT,
+ADD COLUMN state TEXT,
+ADD COLUMN country TEXT;
+ALTER TABLE public.events
+ALTER COLUMN country SET DEFAULT 'Nepal';
+
 
 ALTER TABLE public.events
 ADD COLUMN category TEXT;
--- category can be distinct from tags if needed, or derived. 
--- User asked for category. I will keep it.
+
+
 
 ALTER TABLE public.events
 DROP COLUMN ticket_price,
@@ -316,6 +338,7 @@ CREATE TABLE public.ticket_tiers (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+ALTER TABLE public.ticket_tiers ADD COLUMN IF NOT EXISTS perks JSONB DEFAULT '[]'::jsonb;
 
 CREATE INDEX idx_ticket_tiers_event
 ON public.ticket_tiers(event_id);
@@ -541,3 +564,113 @@ CREATE TRIGGER trg_reduce_seats
 AFTER INSERT ON bookings
 FOR EACH ROW
 EXECUTE FUNCTION reduce_seats_after_booking();
+
+
+----paymnet and securit partner side --------
+
+--------------------------------------------------
+-- 1. PAYOUTS TABLE (Updated)
+--------------------------------------------------
+-- DROP TABLE IF EXISTS public.payouts; 
+
+CREATE TABLE IF NOT EXISTS public.payouts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','paid')),
+  transaction_ref TEXT,
+  requested_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  processed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_payouts_partner ON public.payouts(partner_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_event ON public.payouts(event_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_status ON public.payouts(status);
+
+--------------------------------------------------
+-- 2. TRANSACTIONS LEDGER (New)
+--------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  partner_id UUID NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN ('sale', 'payout', 'fee', 'refund')),
+  amount NUMERIC(12,2) NOT NULL, -- (+ Credit, - Debit)
+  reference_id UUID, 
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_partner ON public.transactions(partner_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_event ON public.transactions(event_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_created ON public.transactions(created_at DESC);
+
+
+-- Enable RLS
+ALTER TABLE public.payouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Partners can view their own payouts
+CREATE POLICY "Partners can view own payouts" ON public.payouts
+FOR SELECT USING (auth.uid() IN (SELECT user_id FROM partners WHERE id = partner_id));
+
+-- Policy: Partners can insert payout requests
+CREATE POLICY "Partners can request payouts" ON public.payouts
+FOR INSERT WITH CHECK (auth.uid() IN (SELECT user_id FROM partners WHERE id = partner_id));
+
+-- Policy: Partners can view their own ledger transactions
+CREATE POLICY "Partners can view own transactions" ON public.transactions
+FOR SELECT USING (auth.uid() IN (SELECT user_id FROM partners WHERE id = partner_id));
+
+
+--------------------------------------------------
+-- 3. LOGGING & SECURITY (Consolidated)
+--------------------------------------------------
+
+-- Audit Logs Table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    action VARCHAR(255) NOT NULL, -- e.g., 'LOGIN', 'CANCEL_EVENT', 'REQUEST_PAYOUT'
+    details JSONB DEFAULT '{}', -- Store metadata like event_id, reason, changed_fields
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Withdrawal Logs Table (Specific to payout security)
+CREATE TABLE IF NOT EXISTS withdrawal_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    payout_id UUID REFERENCES payouts(id),
+    partner_id UUID REFERENCES partners(id),
+    action_type VARCHAR(50) NOT NULL, -- 'INITIATE', 'CONFIRM_OTP', 'reject', 'process'
+    status VARCHAR(50) NOT NULL, -- 'success', 'failed'
+    failure_reason TEXT,
+    ip_address VARCHAR(45),
+    details JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Verification Codes (OTP)
+CREATE TABLE IF NOT EXISTS verification_codes (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    code VARCHAR(10) NOT NULL,
+    type VARCHAR(50) DEFAULT 'PAYOUT',
+    metadata JSONB DEFAULT '{}', -- Store amount, event_id here
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE withdrawal_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verification_codes ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Admins can view all audit logs" ON audit_logs
+    FOR SELECT USING (auth.role() = 'service_role');
+
+CREATE POLICY "Partners can view their own withdrawal logs" ON withdrawal_logs
+    FOR SELECT USING (auth.uid() = (SELECT user_id FROM partners WHERE id = withdrawal_logs.partner_id));
