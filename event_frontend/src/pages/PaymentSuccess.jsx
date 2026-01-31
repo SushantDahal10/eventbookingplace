@@ -11,7 +11,20 @@ const PaymentSuccess = () => {
     const [status, setStatus] = useState('verifying'); // verifying, success, error
     const data = searchParams.get('data');
 
+    const [countdown, setCountdown] = useState(5);
     const calledRef = React.useRef(false);
+
+    useEffect(() => {
+        let timer;
+        if (status === 'success' && countdown > 0) {
+            timer = setInterval(() => {
+                setCountdown((prev) => prev - 1);
+            }, 1000);
+        } else if (status === 'success' && countdown === 0) {
+            navigate('/profile/bookings');
+        }
+        return () => clearInterval(timer);
+    }, [status, countdown, navigate]);
 
     useEffect(() => {
         const verifyPayment = async () => {
@@ -24,10 +37,6 @@ const PaymentSuccess = () => {
 
                 if (response.data.success) {
                     setStatus('success');
-                    // Automatically redirect after 3 seconds
-                    setTimeout(() => {
-                        navigate('/profile/bookings');
-                    }, 3000);
                 } else {
                     setStatus('error');
                     toast.error('Payment verification failed');
@@ -40,7 +49,7 @@ const PaymentSuccess = () => {
         };
 
         verifyPayment();
-    }, [navigate, data]);
+    }, [data]);
 
     return (
         <div className="min-h-screen flex flex-col bg-surface-dim font-body">
@@ -63,9 +72,9 @@ const PaymentSuccess = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h1 className="text-3xl font-heading font-black text-gray-900 mb-2">Ticket Booked! 🎉</h1>
+                            <h1 className="text-3xl font-heading font-black text-gray-900 mb-2">Booking Confirmed! 🎉</h1>
                             <p className="text-lg text-gray-600 mb-6 font-medium">
-                                You are all set. See you at the event!
+                                Your booking is confirmed. See you at the event!
                             </p>
 
                             <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 mb-8 text-left space-y-3">
@@ -76,17 +85,10 @@ const PaymentSuccess = () => {
                                         <div className="text-sm text-gray-600">We've sent the ticket details to your inbox.</div>
                                     </div>
                                 </div>
-                                <div className="flex items-start gap-3">
-                                    <span className="text-2xl">📱</span>
-                                    <div>
-                                        <div className="font-bold text-gray-900">SMS Confirmation</div>
-                                        <div className="text-sm text-gray-600">A confirmation has also been sent to your phone.</div>
-                                    </div>
-                                </div>
                             </div>
 
                             <div className="space-y-3">
-                                <p className="text-sm text-gray-400 mb-1">Redirecting you to your tickets in a moment...</p>
+                                <p className="text-sm text-gray-400 mb-1">Redirecting you to your tickets in <span className="text-primary font-bold">{countdown}</span> seconds...</p>
                                 <button
                                     onClick={() => navigate('/profile/bookings')}
                                     className="w-full btn-primary py-4 text-lg shadow-xl shadow-primary/30"

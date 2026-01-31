@@ -13,24 +13,87 @@ const ForgotPassword = () => {
     const [newPassword, setNewPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
+    // Resend States
+    const [timer, setTimer] = useState(0);
+    const [canResend, setCanResend] = useState(true);
+
     // UI States
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [message, setMessage] = useState(null);
+    const [lastActionTime, setLastActionTime] = useState(0);
+
+    // Timer Effect
+    React.useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        } else {
+            setCanResend(true);
+            clearInterval(interval);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    const startTimer = () => {
+        setTimer(60);
+        setCanResend(false);
+    };
 
     const handleRequestOTP = async (e) => {
         e.preventDefault();
+
+        const now = Date.now();
+        if (now - lastActionTime < 20000) {
+            toast.error("You have reached max attempts, wait 20 sec", {
+                icon: '⏳',
+                style: {
+                    borderRadius: '10px',
+                    background: '#333',
+                    color: '#fff',
+                },
+            });
+            return;
+        }
+
         setLoading(true);
-        setError(null);
         try {
             await authService.forgotPassword(email);
             setStep(2);
-            setMessage(`OTP sent to ${email}`);
+            startTimer();
+            setLastActionTime(Date.now());
             toast.success(`OTP sent to ${email}`);
         } catch (err) {
-            const msg = err.response?.data?.error || 'Failed to send OTP';
-            setError(msg);
-            toast.error(msg);
+            toast.error(err.response?.data?.error || 'Failed to send OTP');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendOTP = async () => {
+        if (!canResend) return;
+
+        const now = Date.now();
+        if (now - lastActionTime < 20000) {
+            toast.error("You have reached max attempts, wait 20 sec", {
+                icon: '⏳',
+                style: {
+                    borderRadius: '10px',
+                    background: '#333',
+                    color: '#fff',
+                },
+            });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await authService.forgotPassword(email);
+            startTimer();
+            setLastActionTime(Date.now());
+            toast.success("New OTP sent!");
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to resend OTP');
         } finally {
             setLoading(false);
         }
@@ -38,16 +101,12 @@ const ForgotPassword = () => {
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
         try {
             await authService.resetPassword({ email, otp, newPassword });
             toast.success("Password reset successfully! Please log in.");
             navigate('/login');
         } catch (err) {
-            const msg = err.response?.data?.error || 'Reset failed';
-            setError(msg);
-            toast.error(msg);
+            toast.error(err.response?.data?.error || 'Reset failed');
         } finally {
             setLoading(false);
         }
@@ -68,7 +127,7 @@ const ForgotPassword = () => {
                     <div>
                         <h2 className="text-4xl font-heading font-bold mb-4">Don't worry.</h2>
                         <p className="text-lg text-white/90 max-w-md">
-                            It happens to the best of us. We'll help you get back into your account in no time.
+                            It happens to most of us. We'll help you get back into your account in no time.
                         </p>
                     </div>
                 </div>
@@ -93,16 +152,6 @@ const ForgotPassword = () => {
                         </p>
                     </div>
 
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold">
-                            {error}
-                        </div>
-                    )}
-                    {message && (
-                        <div className="mb-6 p-4 bg-green-50 border border-green-100 text-green-600 rounded-xl text-sm font-bold">
-                            {message}
-                        </div>
-                    )}
 
                     {step === 1 ? (
                         <form onSubmit={handleRequestOTP} className="space-y-6">
@@ -120,10 +169,10 @@ const ForgotPassword = () => {
 
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || (Date.now() - lastActionTime < 20000)}
                                 className="w-full btn-primary py-4 text-lg disabled:opacity-50"
                             >
-                                {loading ? 'Sending...' : 'Send Reset Link'}
+                                {loading ? 'Sending...' : (Date.now() - lastActionTime < 20000 ? `Wait ${Math.ceil(20 - (Date.now() - lastActionTime) / 1000)}s` : 'Verify Email')}
                             </button>
                         </form>
                     ) : (
@@ -138,6 +187,26 @@ const ForgotPassword = () => {
                                     onChange={(e) => setOtp(e.target.value)}
                                     required
                                 />
+                                <div className="mt-4 flex justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={handleResendOTP}
+                                        disabled={!canResend || loading}
+                                        className="text-primary font-bold hover:underline disabled:text-gray-400 disabled:no-underline flex items-center gap-2 text-sm"
+                                    >
+                                        {canResend ? (
+                                            "Resend Code"
+                                        ) : (
+                                            <>
+                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Resend in {timer}s
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
@@ -178,13 +247,16 @@ const ForgotPassword = () => {
                             >
                                 {loading ? 'Resetting...' : 'Set New Password'}
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setStep(1)}
-                                className="w-full text-sm text-gray-500 hover:text-gray-700 font-medium"
-                            >
-                                Wrong email? Try again
-                            </button>
+
+                            <div className="flex flex-col items-center gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+                                >
+                                    Wrong email? Try again
+                                </button>
+                            </div>
                         </form>
                     )}
                 </div>

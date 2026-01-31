@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/authRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const eventRoutes = require('./routes/eventRoutes');
-
+const supportRoutes = require('./routes/supportRoutes');
 const app = express();
 
 // Middleware
@@ -35,8 +35,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/events', eventRoutes);
-
-// Health Check
+app.use('/api/support', supportRoutes);
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Backend is running' });
 });

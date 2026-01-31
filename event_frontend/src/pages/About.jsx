@@ -12,7 +12,7 @@ const ABOUT_SLIDES = [
         subtitle: "We are a team of dreamers, builders, and party-goers.",
         tag: "Our Story",
         primaryAction: { text: "Join our Team", link: "/chat", icon: "🤝" },
-        secondaryAction: { text: "Contact Us", link: "/chat" }
+        secondaryAction: { text: "Contact Us", link: "mailto:info@nepashows.com" }
     },
     {
         id: 2,
@@ -38,7 +38,7 @@ const About = () => {
                             Connecting People Through Experiences
                         </h2>
                         <p className="text-lg text-gray-600 leading-relaxed text-justify animate-[slideUp_1s]">
-                            Founded in 2024, NepaliShows started with a simple idea: booking a concert ticket shouldn't be harder than attending it. We saw a gap in the market where incredible local events were struggling to reach the right audience, and fans were missing out due to clunky booking systems.
+                            Founded in 2025, NepaliShows started with a simple idea: booking a concert ticket shouldn't be harder than attending it. We saw a gap in the market where incredible local events were struggling to reach the right audience, and fans were missing out due to clunky booking systems.
                             <br /><br />
                             Today, we are Nepal's fastest-growing event platform, partnering with the top clubs, venues, and organizers to bring you seamless access to the moments that matter.
                         </p>
@@ -46,9 +46,9 @@ const About = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
                         {[
-                            { count: "50k+", label: "Active Users" },
-                            { count: "1,200+", label: "Events Hosted" },
-                            { count: "98%", label: "Satisfaction Rate" }
+                            { count: "10k+", label: "Active Users" },
+                            { count: "1,000+", label: "Events Hosted" },
+                            { count: "99%", label: "Satisfaction Rate" }
                         ].map((stat, i) => (
                             <div key={i} className="text-center p-8 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-lg transition-all hover:-translate-y-1">
                                 <div className="text-4xl md:text-5xl font-extrabold text-primary mb-2">{stat.count}</div>
@@ -62,7 +62,7 @@ const About = () => {
                             <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover" alt="Team" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-8 md:p-12">
                                 <div>
-                                    <h3 className="text-3xl font-bold text-white mb-2">Built with ❤️ in Kathmandu</h3>
+                                    <h3 className="text-3xl font-bold text-white mb-2">Built with ❤️ in Nepal</h3>
                                     <p className="text-gray-300">Our headquarters is just a stone's throw away from the events we love.</p>
                                 </div>
                             </div>

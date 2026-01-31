@@ -6,15 +6,29 @@ const supabase = require('../config/supabaseClient');
  */
 exports.getAllEvents = async (req, res) => {
     try {
-        const { data, error } = await supabase
+        const { city, category } = req.query;
+        let query = supabase
             .from('events')
             .select(`
                 *,
                 partners ( organization_name, official_email ),
-                event_images ( * )
+                event_images ( * ),
+                ticket_tiers ( available_quantity )
             `)
-            .eq('status', 'active')
-            .order('event_date', { ascending: true });
+            .eq('status', 'active');
+
+        if (city && city !== 'All') {
+            query = query.ilike('city', `%${city}%`);
+        }
+        if (category && category !== 'All') {
+            query = query.ilike('category', `%${category}%`);
+        }
+
+        // Filter valid events (future dates)
+        const today = new Date().toISOString().split('T')[0];
+        query = query.gte('event_date', today);
+
+        const { data, error } = await query.order('event_date', { ascending: true });
 
         if (error) {
             console.error('Fetch Events Error:', error);

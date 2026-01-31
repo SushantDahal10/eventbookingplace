@@ -63,8 +63,8 @@ const Footer = () => {
             <div className="max-w-[1200px] mx-auto px-4 pt-8 border-t border-gray-700 flex flex-col md:flex-row justify-between items-center text-xs">
                 <p>&copy; {new Date().getFullYear()} NepaliShows. All rights reserved.</p>
                 <div className="flex gap-4 mt-4 md:mt-0">
-                    <a href="#" className="hover:text-white">Privacy Policy</a>
-                    <a href="#" className="hover:text-white">Terms of Service</a>
+                    <Link to="/privacy" className="hover:text-white">Privacy Policy</Link>
+                    <Link to="/terms" className="hover:text-white">Terms of Service</Link>
                 </div>
             </div>
         </footer >

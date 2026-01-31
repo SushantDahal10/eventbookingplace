@@ -17,6 +17,8 @@ import Privacy from '../pages/Privacy';
 import MyBookings from '../pages/MyBookings';
 import Chat from '../pages/Chat';
 import PaymentSuccess from '../pages/PaymentSuccess';
+import PaymentFailure from '../pages/PaymentFailure';
+import Profile from '../pages/Profile';
 
 const AppRoutes = () => {
     return (
@@ -34,9 +36,11 @@ const AppRoutes = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/booking/:eventId" element={<Booking />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/failure" element={<PaymentFailure />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/profile/bookings" element={<MyBookings />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/chat" element={<Chat />} />
 
         </Routes>

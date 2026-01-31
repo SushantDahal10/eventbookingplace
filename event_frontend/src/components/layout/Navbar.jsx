@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const Navbar = () => {
+    const navigate = useNavigate();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -15,7 +16,7 @@ const Navbar = () => {
     const intentProfileRef = useRef(null);
 
     // Location State
-    const [userLocation, setUserLocation] = useState('Kathmandu');
+    const [userLocation, setUserLocation] = useState(localStorage.getItem('userLocation') || 'Kathmandu');
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const [isDetecting, setIsDetecting] = useState(false);
 
@@ -27,8 +28,8 @@ const Navbar = () => {
         location.pathname === '/events' ||
         location.pathname === '/venues' ||
         location.pathname === '/about' ||
-        /^\/events\/\d+$/.test(location.pathname) ||
-        /^\/venues\/\d+$/.test(location.pathname);
+        /^\/events\/[a-f0-9-]+$/.test(location.pathname) ||
+        /^\/venues\/[a-f0-9-]+$/.test(location.pathname);
 
     const isLightNav = !hasHeroSection;
 
@@ -62,18 +63,30 @@ const Navbar = () => {
     const handleUseCurrentLocation = () => {
         setIsDetecting(true);
         if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                setTimeout(() => {
-                    setUserLocation("Lalitpur, Current");
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                    const data = await response.json();
+
+                    // Try to find city, town, or village
+                    const city = data.address.city || data.address.town || data.address.village || data.address.state || "Kathmandu";
+
+                    setUserLocation(city);
+                    localStorage.setItem('userLocation', city);
+                    window.dispatchEvent(new Event('locationChanged'));
+                    toast.success(`Location detected: ${city}`);
+                } catch (error) {
+                    console.error("Reverse geocoding error:", error);
+                    toast.error("Failed to identify city name.");
+                } finally {
                     setIsDetecting(false);
                     setIsLocationModalOpen(false);
-                }, 1500);
+                }
             }, (error) => {
-                setTimeout(() => {
-                    setUserLocation("Near Me");
-                    setIsDetecting(false);
-                    setIsLocationModalOpen(false);
-                }, 1000);
+                console.error("Geolocation error:", error);
+                toast.error("Location access denied or unavailable.");
+                setIsDetecting(false);
             });
         } else {
             toast.error("Geolocation is not available in your browser.");
@@ -83,6 +96,8 @@ const Navbar = () => {
 
     const handleSelectCity = (city) => {
         setUserLocation(city);
+        localStorage.setItem('userLocation', city);
+        window.dispatchEvent(new Event('locationChanged'));
         setIsLocationModalOpen(false);
     };
 
@@ -95,7 +110,6 @@ const Navbar = () => {
     const navItems = [
         { label: 'Home', path: '/' },
         { label: 'Events', path: '/events' },
-        // { label: 'Venues', path: '/venues' },
         { label: 'About', path: '/about' }
     ];
 
@@ -188,6 +202,9 @@ const Navbar = () => {
                                             </div>
 
                                             <div className="py-2">
+                                                <Link to="/profile" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors flex items-center gap-3">
+                                                    <span>✏️</span> Edit Profile
+                                                </Link>
                                                 <Link to="/profile/bookings" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors flex items-center gap-3">
                                                     <span>🎟️</span> My Bookings
                                                 </Link>
@@ -198,9 +215,9 @@ const Navbar = () => {
 
                                             <div className="border-t border-gray-100 p-2">
                                                 <button
-                                                    onClick={() => {
-                                                        logout();
-                                                        setIsLoggedIn(false); // Update local state if needed (though context handles it)
+                                                    onClick={async () => {
+                                                        await logout();
+                                                        navigate('/');
                                                     }}
                                                     className="w-full text-center py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                 >
@@ -266,7 +283,7 @@ const Navbar = () => {
                                         <Link to="/profile/bookings" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-700 hover:text-primary font-medium px-2 py-1 flex items-center gap-2">
                                             <span>🎟️</span> My Bookings
                                         </Link>
-                                        <button onClick={() => { logout(); setIsMobileMenuOpen(false); }} className="text-red-500 font-medium text-left px-2 py-1">Logout</button>
+                                        <button onClick={async () => { await logout(); setIsMobileMenuOpen(false); navigate('/'); }} className="text-red-500 font-medium text-left px-2 py-1">Logout</button>
                                     </>
                                 ) : (
                                     <Link to="/login" className="bg-primary text-white px-4 py-3 rounded-xl text-center font-bold mt-2 shadow-lg shadow-primary/20">
@@ -317,15 +334,15 @@ const Navbar = () => {
 
                             <div className="space-y-2">
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Popular Cities</p>
-                                {['Kathmandu', 'Lalitpur', 'Bhaktapur', 'Pokhara', 'Chitwan'].map(city => (
+                                {['All', 'Kathmandu', 'Lalitpur', 'Bhaktapur', 'Pokhara', 'Chitwan'].map(city => (
                                     <button
                                         key={city}
                                         onClick={() => handleSelectCity(city)}
-                                        className={`w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 flex justify-between items-center transition-colors ${userLocation.includes(city) ? 'text-primary font-bold bg-primary/5' : 'text-gray-700 font-medium'
+                                        className={`w-full text-left px-4 py-3 rounded-lg hover:bg-gray-50 flex justify-between items-center transition-colors ${userLocation === city ? 'text-primary font-bold bg-primary/5' : 'text-gray-700 font-medium'
                                             }`}
                                     >
                                         {city}
-                                        {userLocation.includes(city) && (
+                                        {userLocation === city && (
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                             </svg>

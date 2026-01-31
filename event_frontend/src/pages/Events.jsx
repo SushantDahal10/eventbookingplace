@@ -3,30 +3,11 @@ import { useLocation } from 'react-router-dom'; // No Link import needed if not 
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import EventCard from '../features/events/components/EventCard';
-import BigCarousel from '../components/common/BigCarousel';
+import HeroCarousel from '../components/common/HeroCarousel';
 import api from '../services/api';
 
 // Carousel Slides Data (Using Static or could also be fetched)
-const EVENT_SLIDES = [
-    {
-        id: 1,
-        image: "https://images.unsplash.com/photo-1459749411177-287ce63e3ba9?auto=format&fit=crop&q=80&w=1600",
-        title: "Upcoming Concerts",
-        subtitle: "Feel the energy of live music.",
-        tag: "Music",
-        primaryAction: { text: "View Details", link: "/events", icon: "🎟️" },
-        secondaryAction: { text: "Browse All", link: "/events" }
-    },
-    {
-        id: 2,
-        image: "https://media.istockphoto.com/id/637268486/photo/patan.jpg?s=612x612&w=0&k=20&c=IHL_X9XMlTKCFjXMAdJTr3dLoJTN-Vvn5QsYfNtnkgc=",
-        title: "Comedy Specials",
-        subtitle: "Laugh out loud with top comedians.",
-        tag: "Comedy",
-        primaryAction: { text: "View Details", link: "/events", icon: "🎟️" },
-        secondaryAction: { text: "Browse All", link: "/events" }
-    }
-];
+
 
 const Events = () => {
     const { search } = useLocation();
@@ -59,10 +40,10 @@ const Events = () => {
 
                     return {
                         ...e,
-                        date: new Date(e.event_date).toLocaleDateString(),
+                        date: new Date(e.event_date).toLocaleDateString('en-US', { timeZone: 'UTC' }),
                         price: e.ticket_tiers?.[0]?.price || 'N/A', // Show starting price
                         image: coverImage,
-                        category: e.tags?.[1] || "Music" // Derive category from tags (index 1 usually category in our convention)
+                        category: e.category || "Music" // Use category from DB
                     };
                 });
                 setEvents(mappedEvents);
@@ -83,12 +64,18 @@ const Events = () => {
         return matchesCategory && matchesSearch;
     });
 
+    // Generate random slides for Hero Carousel from fetched events
+    const heroSlides = React.useMemo(() => {
+        if (events.length === 0) return [];
+        return [...events].sort(() => 0.5 - Math.random()).slice(0, 3);
+    }, [events]);
+
     return (
         <div className="min-h-screen flex flex-col bg-surface-dim font-body">
             <Navbar />
 
             {/* Big Premium Carousel */}
-            <BigCarousel slides={EVENT_SLIDES} />
+            <HeroCarousel slides={heroSlides.length > 0 ? heroSlides : []} />
 
             <main className="flex-grow max-w-[1200px] mx-auto px-4 py-16 w-full relative z-10 -mt-20">
                 {/* Search & Filter Card */}
@@ -111,7 +98,7 @@ const Events = () => {
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-                        {["All", "Concert", "Comedy", "Sports", "Music"].map(cat => (
+                        {["All", "Concert", "Comedy", "Sports & Fitness", "Music", "Business"].map(cat => (
                             <button
                                 key={cat}
                                 type="button"

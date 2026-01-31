@@ -2,18 +2,53 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const EventCard = ({ event }) => {
+    // Calculate total tickets
+    const totalTickets = event.ticket_tiers?.reduce((acc, tier) => acc + (tier.available_quantity || 0), 0) ?? 0;
+    const isSoldOut = totalTickets === 0 && (event.ticket_tiers && event.ticket_tiers.length > 0);
+
+    // Date Logic: Treat DB UTC time as Local Time
+    const eventDate = new Date(event.event_date);
+    const userTarget = new Date(
+        eventDate.getUTCFullYear(),
+        eventDate.getUTCMonth(),
+        eventDate.getUTCDate(),
+        eventDate.getUTCHours(),
+        eventDate.getUTCMinutes(),
+        eventDate.getUTCSeconds()
+    );
+    const now = new Date();
+    const diff = userTarget - now;
+    const isBookingClosed = diff < 12 * 60 * 60 * 1000;
+
     return (
-        <Link to={`/events/${event.id}`} className="block">
+        <Link to={`/events/${event.id}`} className="block h-full">
             <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer border border-gray-100 flex flex-col h-full">
                 {/* Image Container */}
                 <div className="relative h-48 overflow-hidden">
                     <img
                         src={event.image}
                         alt={event.title}
-                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                        className={`w-full h-full object-cover transform transition-transform duration-500 ${isSoldOut ? 'grayscale' : 'group-hover:scale-110'}`}
                     />
-                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-secondary shadow-sm">
+
+                    {/* Category Badge - Top Right */}
+                    <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-secondary shadow-sm z-10">
                         {event.category}
+                    </div>
+
+                    {/* Status Labels - Top Left (Premium Design) */}
+                    <div className="absolute top-3 left-3 flex flex-col gap-2 items-start z-10">
+                        {!isSoldOut && totalTickets < 20 && totalTickets > 0 && (
+                            <span className="bg-red-600/95 backdrop-blur-sm text-white text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-lg shadow-red-600/20 animate-pulse border border-white/20 flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></span>
+                                High Demand
+                            </span>
+                        )}
+                        {!isSoldOut && !isBookingClosed && diff < 48 * 60 * 60 * 1000 && (
+                            <span className="bg-orange-500/95 backdrop-blur-sm text-white text-xs font-extrabold px-3 py-1.5 rounded-lg shadow-lg shadow-orange-500/20 border border-white/20 flex items-center gap-1.5">
+                                <span>⏳</span> Closing Soon
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -33,8 +68,14 @@ const EventCard = ({ event }) => {
                         {event.location}
                     </div>
 
-                    <button className="mt-auto w-full border-2 border-primary text-primary hover:bg-primary hover:text-white font-bold py-2 rounded-lg transition-all text-sm">
-                        Book Ticket
+                    <button
+                        disabled={isSoldOut || isBookingClosed}
+                        className={`mt-auto w-full border-2 font-bold py-2 rounded-lg transition-all text-sm ${isSoldOut || isBookingClosed
+                            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                            : "border-primary text-primary hover:bg-primary hover:text-white"
+                            }`}
+                    >
+                        {isSoldOut ? "Sold Out" : isBookingClosed ? "Booking Window Passed" : "Book Ticket"}
                     </button>
                 </div>
             </div>

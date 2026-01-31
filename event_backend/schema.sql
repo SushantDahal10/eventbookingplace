@@ -57,7 +57,7 @@ CREATE TABLE public.otps (
   code TEXT NOT NULL,
 
   purpose TEXT DEFAULT 'verification'
-    CHECK (purpose IN ('verification','reset')),
+    CHECK (purpose IN ('verification', 'reset')),
 
   expires_at TIMESTAMPTZ NOT NULL,
 

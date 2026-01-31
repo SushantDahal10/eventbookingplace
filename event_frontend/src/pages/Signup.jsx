@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
@@ -16,31 +16,14 @@ const Signup = () => {
 
     // UI States
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-
     const [signupToken, setSignupToken] = useState(null);
 
-    const handleSignup = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await authService.register({ fullName: name, email, password });
-            setSignupToken(response.signupToken);
-            // On success, move to OTP step
-            setStep(2);
-        } catch (err) {
-            setError(err.response?.data?.error || 'Registration failed');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Timer Logic
-    const [timer, setTimer] = React.useState(60);
-    const [canResend, setCanResend] = React.useState(false);
+    const [timer, setTimer] = useState(60);
+    const [canResend, setCanResend] = useState(false);
+    const [lastActionTime, setLastActionTime] = useState(0);
 
-    React.useEffect(() => {
+    useEffect(() => {
         let interval;
         if (step === 2 && timer > 0) {
             interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
@@ -50,18 +33,61 @@ const Signup = () => {
         return () => clearInterval(interval);
     }, [step, timer]);
 
-    const handleResendOtp = async () => {
+    const handleSignup = async (e) => {
+        e.preventDefault();
+
+        const now = Date.now();
+        if (now - lastActionTime < 20000) {
+            toast.error("You have reached max attempts, wait 20 sec", {
+                icon: '⏳',
+                style: {
+                    borderRadius: '10px',
+                    background: '#333',
+                    color: '#fff',
+                },
+            });
+            return;
+        }
+
         setLoading(true);
-        setError(null);
+        try {
+            const response = await authService.register({ fullName: name, email, password });
+            setSignupToken(response.signupToken);
+            setStep(2);
+            toast.success("Verification code sent to your email!");
+            setTimer(60);
+            setCanResend(false);
+            setLastActionTime(Date.now());
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Registration failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        const now = Date.now();
+        if (now - lastActionTime < 20000) {
+            toast.error("You have reached max attempts, wait 20 sec", {
+                icon: '⏳',
+                style: {
+                    borderRadius: '10px',
+                    background: '#333',
+                    color: '#fff',
+                },
+            });
+            return;
+        }
+
+        setLoading(true);
         try {
             await authService.resendOtp(email);
             setTimer(60);
             setCanResend(false);
+            setLastActionTime(Date.now());
             toast.success("New code sent to your email!");
         } catch (err) {
-            const msg = err.response?.data?.error || 'Failed to resend OTP';
-            setError(msg);
-            toast.error(msg);
+            toast.error(err.response?.data?.error || 'Failed to resend OTP');
         } finally {
             setLoading(false);
         }
@@ -70,17 +96,17 @@ const Signup = () => {
     const handleVerify = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
         try {
-            if (otp.length !== 6) throw new Error("Please enter a valid 6-digit code");
+            if (otp.length !== 6) {
+                toast.error("Please enter a valid 6-digit code");
+                return;
+            }
 
             await authService.verifyOtp({ email, otp, signupToken });
             toast.success("Verification successful! You can now log in.");
             navigate('/login');
         } catch (err) {
-            const msg = err.response?.data?.error || err.message || 'Verification failed';
-            setError(msg);
-            toast.error(msg);
+            toast.error(err.response?.data?.error || err.message || 'Verification failed');
         } finally {
             setLoading(false);
         }
@@ -88,7 +114,6 @@ const Signup = () => {
 
     return (
         <div className="min-h-screen flex bg-surface-dim font-body">
-
             {/* Left Side - Visual */}
             <div className="hidden lg:flex w-1/2 relative overflow-hidden bg-primary">
                 <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center opacity-40 mix-blend-multiply"></div>
@@ -121,12 +146,6 @@ const Signup = () => {
                         <h1 className="text-4xl font-heading font-extrabold text-secondary mb-3">Create Account</h1>
                         <p className="text-text-muted">Start your journey with us today.</p>
                     </div>
-
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold">
-                            {error}
-                        </div>
-                    )}
 
                     {step === 1 ? (
                         <form onSubmit={handleSignup} className="space-y-5">
@@ -188,10 +207,10 @@ const Signup = () => {
 
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || (Date.now() - lastActionTime < 20000)}
                                 className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Creating Account...' : 'Get Started'}
+                                {loading ? 'Creating Account...' : (Date.now() - lastActionTime < 20000 ? `Wait ${Math.ceil(20 - (Date.now() - lastActionTime) / 1000)}s` : 'Get Started')}
                             </button>
                         </form>
                     ) : (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 
 const Login = () => {
@@ -10,21 +11,19 @@ const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
         try {
             await login({ email, password });
-
+            toast.success('Successfully signed in!');
             // Redirect to where they came from, or home
             const from = location.state?.from?.pathname || "/";
             navigate(from, { replace: true });
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed');
+            toast.error(err.response?.data?.error || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
@@ -72,12 +71,6 @@ const Login = () => {
                         <h1 className="text-4xl font-heading font-extrabold text-secondary mb-3">Welcome Back</h1>
                         <p className="text-text-muted">Enter your details to access your account.</p>
                     </div>
-
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl text-sm font-bold">
-                            {error}
-                        </div>
-                    )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>

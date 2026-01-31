@@ -22,6 +22,18 @@ const Booking = () => {
         email: user?.email || '',
         phoneNumber: ''
     });
+    const [errors, setErrors] = useState({});
+
+    // Update attendee details when user data is loaded
+    useEffect(() => {
+        if (user) {
+            setCheckoutDetails(prev => ({
+                ...prev,
+                fullName: prev.fullName || user.fullName || '',
+                email: prev.email || user.email || ''
+            }));
+        }
+    }, [user]);
 
     // Fetch Event Data
     useEffect(() => {
@@ -68,7 +80,7 @@ const Booking = () => {
     }, 0) : 0;
 
     const totalTickets = Object.values(ticketCounts).reduce((a, b) => a + b, 0);
-    const serviceFee = 0; // Backend handles fees or set to 0 strictly
+    const serviceFee = Math.round(subtotal * 0.05);
     const total = subtotal + serviceFee;
 
     const handleCountChange = (tierId, delta) => {
@@ -90,7 +102,20 @@ const Booking = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
+
+        if (name === 'phoneNumber') {
+            const digitsOnly = value.replace(/\D/g, '');
+            if (digitsOnly.length > 10) {
+                toast.error("Phone number cannot exceed 10 digits");
+                return;
+            }
+        }
+
         setCheckoutDetails(prev => ({ ...prev, [name]: value }));
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: '' }));
+        }
     };
 
     const handleCheckout = async (e) => {
@@ -108,10 +133,33 @@ const Booking = () => {
         }
 
         // Validate Attendee Details
-        if (!checkoutDetails.fullName || !checkoutDetails.email || !checkoutDetails.phoneNumber) {
-            toast.error("Please fill in all attendee details (Name, Email, Phone)");
-            // Optional: scroll to the form
-            document.getElementById('attendee-details')?.scrollIntoView({ behavior: 'smooth' });
+        const newErrors = {};
+
+        // Full Name Validation
+        if (!checkoutDetails.fullName.trim()) {
+            newErrors.fullName = "Full name is required";
+        }
+
+        // Email Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!checkoutDetails.email) {
+            newErrors.email = "Email is required";
+        } else if (!emailRegex.test(checkoutDetails.email)) {
+            newErrors.email = "Please enter a valid email format";
+        }
+
+        // Phone Number Validation
+        const phoneDigits = checkoutDetails.phoneNumber.replace(/\D/g, '');
+        if (!checkoutDetails.phoneNumber) {
+            newErrors.phoneNumber = "Phone number is required";
+        } else if (phoneDigits.length !== 10) {
+            newErrors.phoneNumber = "Phone number must be exactly 10 digits";
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            toast.error("Please fix the errors in attendee details");
+            document.getElementById('attendee-details')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 
@@ -131,6 +179,8 @@ const Booking = () => {
                     bookingItems,
                     eventId: event.id,
                     userId: user.id,
+                    checkoutDetails, // Pass customer details (name, email, phone)
+                    paymentMethod, // Pass selected payment method
                     amount: total, // For reference/validation only
                     serviceCharge: 0,
                     deliveryCharge: 0,
@@ -199,8 +249,20 @@ const Booking = () => {
                                         <div key={tier.id} className={`flex justify-between items-center p-4 rounded-xl border transition-all ${ticketCounts[tier.id] > 0 ? 'bg-primary/5 border-primary/30 shadow-sm' : 'bg-white border-gray-100'}`}>
                                             <div className="flex-grow">
                                                 <div className="font-bold text-gray-900 text-lg">{tier.tier_name}</div>
+
+                                                {/* Perks Display */}
+                                                {tier.perks && Array.isArray(tier.perks) && tier.perks.length > 0 && (
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        {tier.perks.map((perk, idx) => (
+                                                            <span key={idx} className="px-3 py-1 rounded-full bg-gray-50 text-gray-600 text-xs font-semibold border border-gray-100 shadow-sm">
+                                                                {perk}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+
                                                 <div className="text-sm font-medium mt-1">
-                                                    {tier.available_quantity > 20 ? (
+                                                    {tier.available_quantity > 10 ? (
                                                         <span className="text-green-600 flex items-center gap-1">
                                                             Selling Fast <span className="text-lg">🔥</span>
                                                         </span>
@@ -255,8 +317,9 @@ const Booking = () => {
                                             value={checkoutDetails.fullName}
                                             onChange={handleInputChange}
                                             placeholder="John Doe"
-                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            className={`w-full px-4 py-3 rounded-xl bg-gray-50 border ${errors.fullName ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all`}
                                         />
+                                        {errors.fullName && <p className="text-xs text-red-500 font-bold ml-1">{errors.fullName}</p>}
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-sm font-bold text-gray-700">Email Address</label>
@@ -266,8 +329,9 @@ const Booking = () => {
                                             value={checkoutDetails.email}
                                             onChange={handleInputChange}
                                             placeholder="john@example.com"
-                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            className={`w-full px-4 py-3 rounded-xl bg-gray-50 border ${errors.email ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all`}
                                         />
+                                        {errors.email && <p className="text-xs text-red-500 font-bold ml-1">{errors.email}</p>}
                                     </div>
                                     <div className="space-y-1 md:col-span-2">
                                         <label className="text-sm font-bold text-gray-700">Phone Number</label>
@@ -276,9 +340,11 @@ const Booking = () => {
                                             name="phoneNumber"
                                             value={checkoutDetails.phoneNumber}
                                             onChange={handleInputChange}
-                                            placeholder="+977 9800000000"
-                                            className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                            placeholder="98XXXXXXXX"
+                                            className={`w-full px-4 py-3 rounded-xl bg-gray-50 border ${errors.phoneNumber ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-200'} focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all`}
                                         />
+                                        {errors.phoneNumber && <p className="text-xs text-red-500 font-bold ml-1">{errors.phoneNumber}</p>}
+                                        <p className="text-[10px] text-gray-400 ml-1">Example: 9841000000 (10 digits)</p>
                                     </div>
                                 </div>
                             </div>

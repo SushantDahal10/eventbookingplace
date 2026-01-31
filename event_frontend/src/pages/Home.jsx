@@ -1,69 +1,74 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import HeroCarousel from '../components/common/HeroCarousel';
 import SearchBar from '../components/common/SearchBar';
 import EventCard from '../features/events/components/EventCard';
 import { Link } from 'react-router-dom';
-
-// Dummy data for events
-const POPULAR_EVENTS = [
-  {
-    id: 1,
-    title: "KTM Rock Fest",
-    date: "Oct 26, 2026",
-    location: "Dasarath Stadium, KTM",
-    category: "Concert",
-    image: "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=600"
-  },
-  {
-    id: 2,
-    title: "Patan Comedy Night",
-    date: "Nov 02, 2026",
-    location: "Patan Durbar Square",
-    category: "Comedy",
-    image: "https://media.istockphoto.com/id/637268486/photo/patan.jpg?s=612x612&w=0&k=20&c=IHL_X9XMlTKCFjXMAdJTr3dLoJTN-Vvn5QsYfNtnkgc="
-  },
-  {
-    id: 3,
-    title: "Lalitpur Futsal League",
-    date: "Nov 10, 2026",
-    location: "Lalitpur Futsal Arena",
-    category: "Sports",
-    image: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80&w=600"
-  },
-  {
-    id: 4,
-    title: "Jazz at the Mandala",
-    date: "Nov 15, 2026",
-    location: "Mandala Theater",
-    category: "Music",
-    image: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?auto=format&fit=crop&q=80&w=600"
-  }
-];
-
-// Mapping Category Names to Query Params
-const CATEGORIES = [
-  { id: 1, name: "Concerts", slug: "Concert", icon: "🎉", color: "bg-purple-100 text-purple-600" },
-  { id: 2, name: "Comedy", slug: "Comedy", icon: "🎙️", color: "bg-yellow-100 text-yellow-600" },
-  { id: 3, name: "Sports", slug: "Sports", icon: "⚽", color: "bg-blue-100 text-blue-600" },
-  { id: 4, name: "Music", slug: "Music", icon: "🎵", color: "bg-pink-100 text-pink-600" },
-  { id: 5, name: "Workshop", slug: "Workshop", icon: "💡", color: "bg-green-100 text-green-600" },
-];
+import api from '../services/api';
 
 const Home = () => {
+  const [events, setEvents] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const selectedCity = localStorage.getItem('userLocation') || 'Kathmandu';
+
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Fetch Events
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        setLoading(true);
+        // Fetch events filtered by selected city
+        const cityFilter = selectedCity === 'All' ? '' : selectedCity;
+        const response = await api.get(`/events?city=${cityFilter}`);
+
+        if (response.data.success) {
+          const fetchedEvents = response.data.events.map(event => ({
+            ...event,
+            image: event.event_images?.find(img => img.image_type === 'cover')?.image_url || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&q=80&w=600"
+          }));
+          setEvents(fetchedEvents);
+
+          // Derive categories from fetched events or use static list with real links
+          const mockCats = [
+            { name: "Concerts", slug: "Concert", icon: "🎉", color: "bg-purple-100 text-purple-600" },
+            { name: "Comedy", slug: "Comedy", icon: "🎙️", color: "bg-yellow-100 text-yellow-600" },
+            { name: "Sports & Fitness", slug: "Sports & Fitness", icon: "⚽", color: "bg-blue-100 text-blue-600" },
+            { name: "Music", slug: "Music", icon: "🎵", color: "bg-pink-100 text-pink-600" },
+            { name: "Business", slug: "Business", icon: "💡", color: "bg-green-100 text-green-600" },
+          ];
+          setCategories(mockCats);
+        }
+      } catch (error) {
+        console.error("Home fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHomeData();
+
+    // Listen for location changes
+    const handleLocationChange = () => fetchHomeData();
+    window.addEventListener('locationChanged', handleLocationChange);
+    return () => window.removeEventListener('locationChanged', handleLocationChange);
+  }, [selectedCity]);
+
+  const shuffledEventsForHero = React.useMemo(() => {
+    return [...events].sort(() => 0.5 - Math.random());
+  }, [events]);
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-dim font-body">
       <Navbar />
 
       <main className="flex-grow">
-        {/* Hero Section */}
-        <HeroCarousel />
+        {/* Dynamic Hero Section */}
+        <HeroCarousel slides={shuffledEventsForHero.slice(0, 3)} />
 
         {/* Search Bar */}
         <SearchBar />
@@ -78,10 +83,10 @@ const Home = () => {
           </div>
 
           <div className="flex flex-wrap justify-center gap-6">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat, idx) => (
               <Link
-                key={cat.id}
-                to={`/events?category=${cat.slug}`}
+                key={idx}
+                to={`/events?category=${encodeURIComponent(cat.slug)}&city=${selectedCity}`}
                 className="group flex flex-col items-center gap-3 p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 w-36 md:w-48"
               >
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl group-hover:scale-110 transition-transform ${cat.color}`}>
@@ -94,13 +99,13 @@ const Home = () => {
         </section>
 
         {/* Popular Events */}
-        <section className="max-w-7xl mx-auto px-4 mb-24 animate-[slideUp_1s]">
+        <section className="max-w-7xl mx-auto px-4 mb-24">
           <div className="flex justify-between items-end mb-10">
             <div>
-              <h3 className="text-4xl font-heading font-extrabold text-secondary mb-2">Trending Now</h3>
-              <p className="text-text-muted text-lg">Don't miss out on these popular upcoming experiences.</p>
+              <h3 className="text-4xl font-heading font-extrabold text-secondary mb-2">Trending in {selectedCity}</h3>
+              <p className="text-text-muted text-lg">Top picks for you in this city.</p>
             </div>
-            <Link to="/events" className="hidden md:inline-flex items-center text-primary font-bold hover:text-primary-dark transition-colors text-lg group">
+            <Link to={`/events?city=${selectedCity}`} className="hidden md:inline-flex items-center text-primary font-bold hover:text-primary-dark transition-colors text-lg group">
               View All Events
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-1 transform group-hover:translate-x-1 transition-transform" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -108,11 +113,24 @@ const Home = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {POPULAR_EVENTS.map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-80 bg-gray-200 animate-pulse rounded-3xl" />
+              ))}
+            </div>
+          ) : events.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {events.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+              <p className="text-gray-500 mb-4">No events found in {selectedCity} yet.</p>
+              <Link to="/events" className="text-primary font-bold hover:underline">Browse all events instead</Link>
+            </div>
+          )}
 
           <div className="mt-12 text-center md:hidden">
             <Link to="/events" className="inline-block btn-primary shadow-lg shadow-primary/20">
@@ -121,22 +139,6 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Promo Banner */}
-        {/* <section className="max-w-7xl mx-auto px-4 mb-24">
-          <div className="relative rounded-3xl overflow-hidden bg-secondary h-80 md:h-96 flex items-center">
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1459749411177-287ce63e3ba9?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center opacity-40"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent"></div>
-
-            <div className="relative z-10 p-8 md:p-16 max-w-2xl">
-              <span className="text-primary font-bold tracking-widest uppercase mb-2 block">Partner With Us</span>
-              <h2 className="text-3xl md:text-5xl font-heading font-extrabold text-white mb-6">List Your Venue or Event</h2>
-              <p className="text-gray-300 text-lg mb-8">Get access to thousands of daily users and manage your bookings effortlessly with our dashboard.</p>
-              <Link to="/become-partner" className="inline-block bg-white text-secondary font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-colors transform hover:scale-105 shadow-xl">
-                Become a Partner
-              </Link>
-            </div>
-          </div>
-        </section> */}
 
       </main>
 
